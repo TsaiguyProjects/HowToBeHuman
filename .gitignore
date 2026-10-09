@@ -1,0 +1,36 @@
+# Environment (secrets — never commit)
+.env
+.env.local
+.env.*.local
+
+# Leftover local dirs (untracked, ignore)
+node_modules/
+
+# MediaWiki (installer-generated, holds DB password + secret keys — never commit)
+wiki/LocalSettings.php
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+.docker/
+
+# Logs
+logs/
+*.log
+
+# Testing
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+blob-report/
+.eslintcache

@@ -1,0 +1,73 @@
+services:
+  db:
+    image: mariadb:11.4
+    restart: unless-stopped
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --skip-character-set-client-handshake
+    expose:
+      - "3306"
+    environment:
+      - MARIADB_RANDOM_ROOT_PASSWORD=yes
+      - MARIADB_DATABASE=${MW_DB_NAME:-mediawiki}
+      - MARIADB_USER=${MW_DB_USER:-mediawiki}
+      - MARIADB_PASSWORD=${MW_DB_PASSWORD:?Set MW_DB_PASSWORD in .env}
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h localhost -u root --password=\"$$MARIADB_ROOT_PASSWORD\" 2>/dev/null || mariadb-admin ping -h localhost"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  wiki:
+    image: mediawiki:1.43
+    restart: unless-stopped
+    expose:
+      - "80"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - MW_SITE_NAME=${MW_SITE_NAME:-HowToBeHuman}
+      - MW_DB_NAME=${MW_DB_NAME:-mediawiki}
+      - MW_DB_USER=${MW_DB_USER:-mediawiki}
+      - MW_DB_PASSWORD=${MW_DB_PASSWORD:?Set MW_DB_PASSWORD in .env}
+    volumes:
+      # Whole MediaWiki docroot persists here (core, LocalSettings.php, uploads).
+      # Initialized from the image on first start; survives recreates/upgrades.
+      - wiki_html:/var/www/html
+      # Your own extensions/skins live in git and overlay into the container.
+      # Load them from LocalSettings.php by path, e.g.:
+      #   wfLoadExtension('MyExtension', "$IP/extensions-custom/MyExtension/extension.json");
+      - ./wiki/extensions-custom:/var/www/html/extensions-custom:ro
+      - ./wiki/skins-custom:/var/www/html/skins-custom:ro
+    healthcheck:
+      test: ["CMD-SHELL", "php -r 'exit(@fsockopen(\"localhost\", 80) ? 0 : 1);'"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./vps/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - wiki
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:2019/config/ >/dev/null 2>&1 || exit 0"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  db_data:
+  wiki_html:
+  caddy_data:
+  caddy_config:

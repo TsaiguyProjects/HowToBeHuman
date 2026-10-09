@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# pre-commit: validate shell scripts + compose config, scoped to what changed.
+# Docs-only commits skip all checks.
+set -eu
+
+# shellcheck source=lib.sh
+source "$(dirname "$0")/lib.sh"
+
+# Testing seam: HOOK_FILES_OVERRIDE supplies the file list instead of git.
+files="${HOOK_FILES_OVERRIDE:-$(git diff --cached --name-only --diff-filter=ACMR)}"
+map_scopes <<< "$files"
+
+if [ "$NEED_VALIDATE" = 0 ]; then
+  _green "✔ pre-commit: docs-only — skipping checks."
+  exit 0
+fi
+
+cd "$REPO_ROOT"
+_info "▸ shell syntax check…"
+check_shell
+
+if [ "$NEED_COMPOSE" = 1 ]; then
+  _info "▸ compose config check…"
+  check_compose
+fi
+
+_green "✔ pre-commit checks passed."

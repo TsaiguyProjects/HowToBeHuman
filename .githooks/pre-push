@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# pre-push: same validation as pre-commit, but always runs the full set
+# (shell + compose) whenever any non-docs change is being pushed.
+set -eu
+
+# shellcheck source=lib.sh
+source "$(dirname "$0")/lib.sh"
+
+ZERO="0000000000000000000000000000000000000000"
+
+# Testing seam: HOOK_FILES_OVERRIDE supplies the file list instead of git.
+if [ -n "${HOOK_FILES_OVERRIDE:-}" ]; then
+  map_scopes <<< "$HOOK_FILES_OVERRIDE"
+else
+  all_files=""
+  run_all=0
+  # pre-push stdin lines: "<local ref> <local sha> <remote ref> <remote sha>"
+  while read -r local_ref local_sha remote_ref remote_sha; do
+    [ -z "${local_ref:-}" ] && continue
+    if [ "$local_sha" = "$ZERO" ]; then
+      continue # branch deletion: nothing to check
+    fi
+    if [ "$remote_sha" = "$ZERO" ]; then
+      run_all=1 # new branch: no base to diff against, check everything
+    else
+      all_files="$all_files
+$(git diff --name-only "$remote_sha..$local_sha" --diff-filter=ACMR)"
+    fi
+  done
+  if [ "$run_all" = 1 ]; then
+    NEED_VALIDATE=1
+    NEED_COMPOSE=1
+  else
+    map_scopes <<< "$all_files"
+  fi
+fi
+
+if [ "$NEED_VALIDATE" = 0 ]; then
+  _green "✔ pre-push: docs-only — skipping checks."
+  exit 0
+fi
+
+cd "$REPO_ROOT"
+_info "▸ shell syntax check…"
+check_shell
+_info "▸ compose config check…"
+check_compose
+
+_green "✔ pre-push checks passed."

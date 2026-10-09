@@ -1,0 +1,31 @@
+name: Deploy to VPS
+
+# After tests pass on main, SSH into the OVHcloud VPS-2 and pull + rebuild.
+# Required GitHub secrets:
+#   VPS_HOST        e.g. 51.68.12.34  (or vps-xxxx.ovh.net)
+#   VPS_USER        e.g. deploy
+#   VPS_SSH_KEY     private OpenSSH key for VPS_USER (ssh-keygen -t ed25519, pub key in ~/.ssh/authorized_keys)
+#   APP_DIR         e.g. /opt/how-to-be-human (must match provision.sh)
+# Optional vars: DOMAIN is read from the VPS .env (managed on the server, never in git).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy-vps:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          script: |
+            set -euo pipefail
+            cd "${{ secrets.APP_DIR }}"
+            git pull --ff-only
+            ./vps/deploy.sh
