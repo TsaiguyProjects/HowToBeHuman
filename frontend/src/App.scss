@@ -1,0 +1,152 @@
+@use './styles/variables' as *;
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: $font-stack;
+  line-height: 1.6;
+  color: $color-text;
+  background-color: $color-bg;
+  min-height: 100vh;
+}
+
+.app {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 2rem;
+
+  h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: $color-heading;
+  }
+}
+
+main {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.card {
+  background: $color-card-bg;
+  border-radius: $radius-card;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid $color-card-border;
+
+  h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: $color-heading;
+  }
+}
+
+.content-layout {
+  display: grid;
+  grid-template-columns: minmax(10rem, 0.35fr) minmax(0, 1fr);
+  gap: 1.5rem;
+}
+
+.content-list {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.5rem;
+
+  button {
+    text-align: left;
+    overflow-wrap: anywhere;
+
+    &[aria-current='page'] {
+      background-color: $color-primary-dark;
+    }
+  }
+}
+
+.markdown-content {
+  min-width: 0;
+  overflow-wrap: anywhere;
+
+  h1,
+  h2,
+  h3,
+  p,
+  ul,
+  ol,
+  blockquote,
+  pre,
+  table {
+    margin-bottom: 1rem;
+  }
+
+  h1,
+  h2,
+  h3 {
+    color: $color-heading;
+    line-height: 1.25;
+  }
+
+  ul,
+  ol {
+    padding-left: 1.5rem;
+  }
+
+  pre {
+    overflow-x: auto;
+    padding: 1rem;
+    border-radius: $radius-btn;
+    background: $color-bg;
+  }
+
+  table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    border-collapse: collapse;
+  }
+
+  th,
+  td {
+    padding: 0.5rem;
+    border: 1px solid $color-card-border;
+    text-align: left;
+  }
+}
+
+@media (max-width: 600px) {
+  .content-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+button {
+  background-color: $color-primary;
+  color: white;
+  border: none;
+  border-radius: $radius-btn;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+
+  &:hover:not(:disabled) {
+    background-color: $color-primary-dark;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}

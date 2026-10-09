@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: how-to-be-human
+  labels:
+    app.kubernetes.io/name: how-to-be-human
+    app.kubernetes.io/managed-by: kubectl
