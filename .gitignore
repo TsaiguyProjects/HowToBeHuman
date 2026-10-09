@@ -1,0 +1,61 @@
+# Python (uv)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+ENV/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+*.egg-info/
+dist/
+build/
+# uv - commit uv.lock, ignore cache
+.uv-cache/
+# NOTE: uv.lock SHOULD be committed (do not ignore it)
+
+# Node (pnpm)
+node_modules/
+.pnpm-store/
+.pnpm-debug.log*
+pnpm-debug.log*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+# NOTE: pnpm-lock.yaml SHOULD be committed (do not ignore it)
+frontend/build/
+frontend/dist/
+*.local
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+.docker/
+
+# Logs
+logs/
+*.log
+
+# Testing
+coverage/
+.nyc_output/

@@ -1,0 +1,87 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "how-to-be-human-backend"
+version = "1.0.0"
+description = "Flask backend for HowToBeHuman"
+requires-python = ">=3.12"
+dependencies = [
+    "flask==3.0.3",
+    "flask-cors==4.0.1",
+    "gunicorn==23.0.0",
+    "python-dotenv==1.0.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "flake8==7.1.1",
+    "black==24.8.0",
+    "pytest==8.3.2",
+    "pytest-cov==5.0.0",
+    "mypy==1.11.2",
+]
+
+# uv dependency groups (modern way, mirrors optional-dependencies)
+# Install with: uv sync --group dev  OR  uv sync --all-groups
+[dependency-groups]
+dev = [
+    "flake8==7.1.1",
+    "black==24.8.0",
+    "pytest==8.3.2",
+    "pytest-cov==5.0.0",
+    "mypy==1.11.2",
+]
+
+[tool.black]
+line-length = 100
+target-version = ['py311']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.git
+  | __pycache__
+  | venv
+  | env
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.flake8]
+max-line-length = 100
+ignore = "E501,W503"
+exclude = [
+    ".git",
+    "__pycache__",
+    "venv",
+    "env",
+    ".venv",
+    "build",
+    "dist",
+    "*.egg-info",
+]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+exclude = [
+    "venv",
+    "env",
+    ".venv",
+    "build",
+    "dist",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
