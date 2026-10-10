@@ -5,12 +5,13 @@ region: nyc3
 
 services:
   # Backend API Service (Dockerfile-based so production uses uv, same as local)
+  # NOTE: source_dir is repo root so the Docker build context matches docker-compose
   - name: backend
-    source_dir: /backend
+    source_dir: /
     github:
       repo: TsaiguyProjects/HowToBeHuman
       branch: main
-    dockerfile_path: Dockerfile
+    dockerfile_path: backend/Dockerfile
     instance_count: 1
     instance_size_slug: basic-xxs
     http_port: 8080
@@ -26,12 +27,13 @@ services:
         value: production
 
   # Frontend Service (serves React app + proxies API to backend)
+  # NOTE: source_dir is repo root so the Docker build context matches docker-compose
   - name: frontend
-    source_dir: /frontend
+    source_dir: /
     github:
       repo: TsaiguyProjects/HowToBeHuman
       branch: main
-    dockerfile_path: Dockerfile
+    dockerfile_path: frontend/Dockerfile
     instance_count: 1
     instance_size_slug: basic-xxs
     http_port: 80

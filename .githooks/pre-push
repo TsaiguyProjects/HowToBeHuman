@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# pre-push: run coverage gates + ALL tests (including e2e), scoped to what is
+# being pushed. Backend-only pushes skip the Playwright suite and vice versa.
+set -eu
+
+# shellcheck source=lib.sh
+source "$(dirname "$0")/lib.sh"
+
+ZERO="0000000000000000000000000000000000000000"
+
+# Testing seam: HOOK_FILES_OVERRIDE supplies the file list instead of git.
+if [ -n "${HOOK_FILES_OVERRIDE:-}" ]; then
+  map_scopes <<< "$HOOK_FILES_OVERRIDE"
+else
+  all_files=""
+  run_all=0
+  # pre-push stdin lines: "<local ref> <local sha> <remote ref> <remote sha>"
+  while read -r local_ref local_sha remote_ref remote_sha; do
+    [ -z "${local_ref:-}" ] && continue
+    if [ "$local_sha" = "$ZERO" ]; then
+      continue # branch deletion: nothing to test
+    fi
+    if [ "$remote_sha" = "$ZERO" ]; then
+      run_all=1 # new branch: no base to diff against, test everything
+    else
+      all_files="$all_files
+$(git diff --name-only "$remote_sha..$local_sha" --diff-filter=ACMR)"
+    fi
+  done
+  if [ "$run_all" = 1 ]; then
+    NEED_BACKEND=1
+    NEED_FRONTEND=1
+  else
+    map_scopes <<< "$all_files"
+  fi
+fi
+
+if [ "$NEED_BACKEND" = 0 ] && [ "$NEED_FRONTEND" = 0 ]; then
+  _green "✔ pre-push: no backend/frontend changes — skipping tests."
+  exit 0
+fi
+
+require_cmd make "Install build tools: Xcode CLT (macOS) or build-essential (Linux)."
+require_cmd docker "Start the Docker daemon (Docker Desktop) and retry."
+cd "$REPO_ROOT"
+
+if [ "$NEED_BACKEND" = 1 ]; then
+  require_cmd uv "Install uv: pip install uv  (or: brew install uv)"
+  _info "▸ backend unit tests + coverage gate…"
+  make test-backend-coverage
+  _info "▸ backend e2e (testcontainers, real images)…"
+  make test-e2e
+fi
+
+if [ "$NEED_FRONTEND" = 1 ]; then
+  require_cmd pnpm "Enable pnpm: corepack enable  (requires Node 20.19+)"
+  _info "▸ frontend unit tests + coverage gate…"
+  make test-frontend-coverage
+  _info "▸ frontend e2e (Playwright, real browser + Docker stack)…"
+  make test-playwright
+fi
+
+_green "✔ pre-push checks passed."

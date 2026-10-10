@@ -1,15 +1,40 @@
-export default [
-  {
-    ignores: ['dist', 'build', 'node_modules'],
+import globals from 'globals'
+import react from 'eslint-plugin-react'
+import reactHooks from 'eslint-plugin-react-hooks'
+import reactRefresh from 'eslint-plugin-react-refresh'
+import tseslint from 'typescript-eslint'
+
+const reactSettings = {
+  settings: {
+    react: {
+      version: 'detect',
+    },
   },
+  plugins: {
+    react,
+    'react-hooks': reactHooks,
+    'react-refresh': reactRefresh,
+  },
+  rules: {
+    ...react.configs.flat.recommended.rules,
+    // Automatic JSX runtime (no React import needed in scope)
+    ...react.configs.flat['jsx-runtime'].rules,
+    ...reactHooks.configs.flat.recommended.rules,
+    'react/jsx-no-target-blank': 'off',
+    'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+  },
+}
+
+export default tseslint.config(
+  {
+    ignores: ['dist', 'build', 'coverage', 'node_modules'],
+  },
+  // Plain JavaScript (config files, scripts)
   {
     files: ['**/*.{js,jsx}'],
     languageOptions: {
       ecmaVersion: 2020,
-      globals: {
-        browser: true,
-        es2020: true,
-      },
+      globals: globals.browser,
       parserOptions: {
         ecmaVersion: 'latest',
         sourceType: 'module',
@@ -18,24 +43,15 @@ export default [
         },
       },
     },
-    settings: {
-      react: {
-        version: '18.3',
-      },
-    },
-    plugins: {
-      react: require('eslint-plugin-react'),
-      'react-hooks': require('eslint-plugin-react-hooks'),
-      'react-refresh': require('eslint-plugin-react-refresh'),
-    },
-    rules: {
-      ...require('eslint-plugin-react').configs.recommended.rules,
-      ...require('eslint-plugin-react-hooks').configs.recommended.rules,
-      'react/jsx-no-target-blank': 'off',
-      'react-refresh/only-export-components': [
-        'warn',
-        { allowConstantExport: true },
-      ],
-    },
+    ...reactSettings,
   },
-]
+  // TypeScript sources
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [...tseslint.configs.recommended],
+    languageOptions: {
+      globals: globals.browser,
+    },
+    ...reactSettings,
+  },
+)

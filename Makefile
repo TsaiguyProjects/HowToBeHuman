@@ -2,7 +2,18 @@
 # Simplifies common development and deployment tasks
 # Uses: uv (Python), pnpm (JavaScript)
 
-.PHONY: help install dev build test lint format clean deploy logs status
+.PHONY: help install dev build test lint format type-check clean deploy logs status open-frontend install-hooks uninstall-hooks
+
+# Cross-platform browser open + frontend URL
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Darwin)
+  OPEN_CMD = open
+else ifeq ($(OS),Windows_NT)
+  OPEN_CMD = start
+else
+  OPEN_CMD = xdg-open
+endif
+FRONTEND_URL = http://localhost:3000
 
 # Default target
 help:
@@ -18,13 +29,17 @@ help:
 	@echo ""
 	@echo "Testing & Quality:"
 	@echo "  make test           Run all tests"
-	@echo "  make test-backend   Run backend tests (uv run pytest)"
+	@echo "  make test-backend   Run backend tests (unit + e2e)"
+	@echo "  make test-e2e       Run e2e tests only (real Docker images)"
 	@echo "  make test-frontend  Run frontend tests (pnpm test)"
+	@echo "  make test-playwright Run Playwright e2e (Docker stack + browser)"
+	@echo "  make test-backend-coverage  Backend coverage gate (100%)"
+	@echo "  make test-frontend-coverage Frontend coverage gate (100%)"
 	@echo "  make lint           Run all linters"
-	@echo "  make lint-backend   Run backend linter (uv run flake8)"
+	@echo "  make lint-backend   Run backend linter (uv run ruff)"
 	@echo "  make lint-frontend  Run frontend linter (pnpm lint)"
 	@echo "  make format         Format code (uv run black + pnpm format)"
-	@echo "  make type-check     Run type checkers (uv run mypy)"
+	@echo "  make type-check     Run type checkers (mypy + tsc)"
 	@echo ""
 	@echo "Deployment:"
 	@echo "  make deploy         Deploy to Digital Ocean App Platform"
@@ -41,6 +56,7 @@ help:
 	@echo "  make env-check      Check installed tool versions"
 	@echo "  make shell-backend  Open shell in backend container"
 	@echo "  make shell-frontend Open shell in frontend container"
+	@echo "  make install-hooks  Install git hooks (commit/push checks)"
 
 # =============================================================================
 # Development
@@ -64,6 +80,7 @@ lock:
 
 dev:
 	@echo "🚀 Starting development environment (production-like)..."
+	@$(MAKE) open-frontend
 	docker-compose up --build
 
 dev-backend:
@@ -72,11 +89,18 @@ dev-backend:
 
 dev-frontend:
 	@echo "🚀 Starting frontend dev server with pnpm..."
+	@$(MAKE) open-frontend
 	cd frontend && pnpm run dev
 
 dev-docker:
 	@echo "🚀 Starting development environment in Docker (hot reload)..."
-	docker-compose --profile dev up --build
+	@$(MAKE) open-frontend
+	docker-compose --profile dev up --build backend-dev frontend-dev
+
+# Open frontend in browser (non-blocking, delayed so server can start)
+open-frontend:
+	@echo "🌐 Opening $(FRONTEND_URL) in browser..."
+	@(sleep 5; $(OPEN_CMD) $(FRONTEND_URL) >/dev/null 2>&1 &)
 
 build:
 	@echo "🏗️  Building production Docker images..."
@@ -95,16 +119,40 @@ build-frontend:
 test: test-backend test-frontend
 
 test-backend:
-	@echo "🧪 Running backend tests with uv..."
+	@echo "🧪 Running backend tests with uv (unit + e2e, needs Docker for e2e)..."
 	cd backend && uv run pytest -v --tb=short
+
+test-backend-unit:
+	@echo "🧪 Running backend unit tests only..."
+	cd backend && uv run pytest -m "not e2e" -v --tb=short
+
+test-e2e:
+	@echo "🧪 Running end-to-end tests against real Docker images..."
+	cd backend && uv run pytest -m e2e -v --tb=short
 
 test-frontend:
 	@echo "🧪 Running frontend tests with pnpm..."
-	cd frontend && pnpm test -- --run 2>/dev/null || echo "No frontend tests configured"
+	cd frontend && pnpm test
+
+test-playwright:
+	@echo "🧪 Running Playwright e2e against Docker stack (http://localhost:3000)..."
+	@docker compose up -d --build
+	@trap 'docker compose down >/dev/null 2>&1' EXIT INT TERM; \
+		echo "⏳ Waiting for app health..."; \
+		for i in $$(seq 1 90); do \
+			curl -sf http://localhost:3000/api/health >/dev/null 2>&1 && break; \
+			sleep 2; \
+		done; \
+		curl -sf http://localhost:3000/api/health >/dev/null 2>&1 || (echo "❌ App did not become healthy"; exit 1); \
+		cd frontend && pnpm exec playwright test
 
 test-backend-coverage:
-	@echo "🧪 Running backend tests with coverage..."
-	cd backend && uv run pytest --cov=app --cov-report=term-missing --cov-report=html
+	@echo "🧪 Running backend tests with coverage (gate: 100%)..."
+	cd backend && uv run pytest -m "not e2e" --cov=app --cov-report=term-missing --cov-report=html
+
+test-frontend-coverage:
+	@echo "🧪 Running frontend tests with coverage (gate: 100% lines/functions/branches/statements)..."
+	cd frontend && pnpm coverage
 
 # =============================================================================
 # Linting & Formatting
@@ -114,7 +162,7 @@ lint: lint-backend lint-frontend
 
 lint-backend:
 	@echo "🔍 Linting backend with uv..."
-	cd backend && uv run flake8 app.py
+	cd backend && uv run ruff check .
 
 lint-frontend:
 	@echo "🔍 Linting frontend with pnpm..."
@@ -130,9 +178,15 @@ format-frontend:
 	@echo "✨ Formatting frontend with pnpm..."
 	cd frontend && pnpm format
 
-type-check:
-	@echo "🔍 Type checking..."
-	cd backend && uv run mypy . --ignore-missing-imports 2>/dev/null || echo "MyPy not configured"
+type-check: type-check-backend type-check-frontend
+
+type-check-backend:
+	@echo "🔍 Type checking backend with uv..."
+	cd backend && uv run mypy .
+
+type-check-frontend:
+	@echo "🔍 Type checking frontend with pnpm..."
+	cd frontend && pnpm typecheck
 
 # =============================================================================
 # Deployment
@@ -167,6 +221,21 @@ status:
 status-detail:
 	@APP_ID=$$(doctl apps list --format ID,Spec.Name --no-header | grep how-to-be-human | awk '{print $$1}'); \
 	doctl apps get $$APP_ID
+
+# =============================================================================
+# Git Hooks
+# =============================================================================
+
+install-hooks:
+	@echo "🪝 Installing git hooks (pre-commit: unit+coverage, pre-push: all tests incl. e2e)..."
+	git config core.hooksPath .githooks
+	chmod +x .githooks/pre-commit .githooks/pre-push
+	@echo "✅ Hooks installed. Bypass with --no-verify."
+
+uninstall-hooks:
+	@echo "🪝 Removing git hooks..."
+	git config --unset core.hooksPath || true
+	@echo "✅ Hooks removed (git default hooks apply again)."
 
 # =============================================================================
 # Database (if using managed DB)

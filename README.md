@@ -40,14 +40,19 @@ A full-stack application with a Python Flask backend and React frontend, deploya
 │   ├── .python-version       # Pinned Python version for uv
 │   └── Dockerfile            # Backend container (uv-based)
 ├── frontend/
-│   ├── src/                  # React source code
+│   ├── src/                  # React + TypeScript source (TSX + SCSS)
+│   ├── tests/
+│   │   ├── unit/             # Vitest unit tests (fetch boundary stubbed)
+│   │   └── e2e/              # Playwright specs (real browser, zero mocks)
 │   ├── public/               # Static assets
 │   ├── package.json          # Node dependencies (pnpm, packageManager pinned)
-│   ├── pnpm-lock.yaml        # Locked JS deps (generate with `pnpm install`, commit it)
-│   ├── vite.config.js        # Vite configuration
+│   ├── tsconfig.json         # TypeScript project references (app + node)
+│   ├── playwright.config.ts  # Playwright config (baseURL via E2E_BASE_URL)
+│   ├── vite.config.ts        # Vite configuration (typed)
 │   ├── nginx.conf            # Nginx reverse proxy config
 │   └── Dockerfile            # Frontend container (pnpm multi-stage build)
 ├── pnpm-workspace.yaml       # pnpm workspace root
+├── pnpm-lock.yaml            # Locked JS deps (generate with `pnpm install`, commit it)
 ├── .npmrc                    # pnpm settings (frozen lockfile, corepack)
 ├── scripts/
 │   ├── dev.sh                # Development startup script
@@ -63,6 +68,9 @@ A full-stack application with a Python Flask backend and React frontend, deploya
 ### Prerequisite: install uv + pnpm (once)
 
 ```bash
+# Node 20.19+ required (Vite 8 engines); latest LTS (24.x) recommended.
+# If you use nvm: nvm install 24 && nvm use 24
+
 # Python package manager (replaces pip/venv)
 pip install uv
 # or: brew install uv
@@ -82,9 +90,9 @@ make dev
 
 # Hot-reload containers (code changes reflect instantly)
 make dev-docker
-# or: docker-compose --profile dev up --build
+# or: docker-compose --profile dev up --build backend-dev frontend-dev
 # Backend dev: http://localhost:8080
-# Frontend dev server: http://localhost:5173
+# Frontend dev server: http://localhost:3000
 ```
 
 ### Option 2: Native Development (uv + pnpm, no Docker)
@@ -100,12 +108,12 @@ uv run python app.py   # runs inside .venv (replaces source venv/bin/activate)
 **Frontend:**
 ```bash
 cd frontend
-pnpm install           # replaces npm install (creates pnpm-lock.yaml on first run)
+pnpm install           # replaces npm install (updates root pnpm-lock.yaml)
 cp ../.env.example .env.local  # Vite uses .env.local
 pnpm run dev           # replaces npm run dev
 ```
 
-> **First run?** `cd backend && uv lock` generates `uv.lock`. `cd frontend && pnpm install` generates `pnpm-lock.yaml`. Commit both lockfiles — they guarantee reproducible builds in Docker, CI, and Digital Ocean.
+> **First run?** `cd backend && uv lock` generates `uv.lock`. `pnpm install` generates the root `pnpm-lock.yaml`. Commit both lockfiles — they guarantee reproducible builds in Docker, CI, and Digital Ocean.
 
 ## Makefile Commands
 
@@ -122,7 +130,9 @@ The project includes a `Makefile` that consolidates common development and deplo
 | `make dev-docker` | Start hot-reload containers in Docker |
 | `make build` | Build production Docker images |
 | `make test` | Run all tests (`uv run pytest` + `pnpm test`) |
-| `make lint` | Run all linters (`uv run flake8` + `pnpm lint`) |
+| `make test-backend-unit` | Backend unit tests only (no Docker needed) |
+| `make test-e2e` | Backend e2e tests (testcontainers, needs Docker) |
+| `make lint` | Run all linters (`uv run ruff` + `pnpm lint`) |
 | `make format` | Format code (`uv run black` + `pnpm format`) |
 | `make deploy` | Deploy to Digital Ocean App Platform |
 | `make logs` | Follow app logs on Digital Ocean |
@@ -142,13 +152,82 @@ make dev
 
 # Or run services individually
 make dev-backend      # Backend on :8080
-make dev-frontend     # Frontend on :5173 (hot reload)
+make dev-frontend     # Frontend on :3000 (hot reload)
 
 # Code quality
 make lint             # Check for issues
 make format           # Auto-fix formatting
 make test             # Run tests
+make type-check       # mypy + tsc
 ```
+
+### Testing Workflow
+
+```bash
+make test             # Everything: backend (unit + e2e) + frontend unit
+make test-backend-unit  # Backend unit tests only (fast, no Docker needed)
+make test-e2e           # Backend e2e only (needs Docker, builds real images)
+make test-frontend      # Frontend unit tests (Vitest + Testing Library)
+make test-playwright    # Playwright e2e (boots Docker stack + real browser)
+```
+
+**Backend** (`backend/tests/`, pytest):
+- `test_api.py` — unit tests against the real Flask app via test client.
+  No mocks: API routes, SPA serving, and fallback logic run for real.
+- `test_e2e.py` (`@pytest.mark.e2e`) — end-to-end tests with
+  [testcontainers](https://testcontainers-python.readthedocs.io/): builds the
+  actual `backend/Dockerfile` + `frontend/Dockerfile` images, runs them on a
+  shared Docker network, and asserts over real HTTP (nginx → gunicorn
+  proxying, SPA fallback, API routing). Zero mocks. Requires a Docker daemon;
+  skipped automatically when one is unavailable (e.g. `pytest -m "not e2e"`).
+
+**Frontend** (`frontend/tests/`, Vitest + Playwright):
+- `tests/unit/` (Vitest + jsdom) — unit tests render real components; only the
+  `fetch` network boundary is stubbed with canned responses.
+- `tests/e2e/` (Playwright, Chromium) — true full end-to-end: a real browser
+  drives the real production Docker stack (nginx + gunicorn), with zero mocks.
+  Run via `make test-playwright`, which builds and boots the compose stack,
+  waits for health, runs the specs, and tears the stack down. One-time setup:
+  `cd frontend && pnpm exec playwright install chromium` (CI uses
+  `--with-deps`). Point at any environment with
+  `E2E_BASE_URL=https://your-env.example pnpm --filter frontend test:e2e`.
+- Cross-service integration is additionally covered by the backend e2e suite,
+  which serves the real built frontend bundle.
+
+### Coverage Gates (100% enforced)
+
+Both suites fail below 100% statements/lines/functions (and branches, frontend):
+
+```bash
+make test-backend-coverage   # pytest + pytest-cov (fail_under in pyproject.toml)
+make test-frontend-coverage  # vitest --coverage (thresholds in vite.config.ts)
+```
+
+- Backend excludes only the `if __name__ == "__main__":` runner block.
+- Frontend measures `src/**` (entry `main.tsx` included — tested, not excluded).
+- New code must arrive with tests; CI runs both gates on every push/PR.
+
+### Git Hooks
+
+Versioned hooks live in `.githooks/` (installed via `make install-hooks`,
+removed with `make uninstall-hooks`). They run only the suites affected by
+your changes — backend-only commits skip frontend tests and vice versa.
+
+| Hook | What runs (per changed stack) | Skips when |
+|------|-------------------------------|------------|
+| `pre-commit` | unit tests + coverage gate | docs-only commit |
+| `pre-push` | coverage gate + **all** tests incl. e2e (testcontainers + Playwright) | docs-only push |
+
+Scope rules: `backend/**` → backend suites; `frontend/**` (+ root
+`pnpm-lock.yaml`, `pnpm-workspace.yaml`, `.npmrc`) → frontend suites; infra
+(`Makefile`, `docker-compose.yml`, `.do/`, `scripts/`, `.githooks/`,
+`.github/`, `.dockerignore`) → everything.
+
+Notes:
+- Hooks call the same `make` targets as CI, so local and remote checks match.
+- If a tool is missing (common with GUI git clients' minimal `PATH`), the
+  hook fails with an install hint instead of a cryptic error.
+- Bypass for a single run with `git commit --no-verify` / `git push --no-verify`.
 
 ### Deployment Workflow
 
