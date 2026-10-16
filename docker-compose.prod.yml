@@ -51,6 +51,8 @@ services:
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
+    environment:
+      - DOMAIN=${DOMAIN:?Set DOMAIN in .env (use localhost for local dev)}
     ports:
       - "80:80"
       - "443:443"
