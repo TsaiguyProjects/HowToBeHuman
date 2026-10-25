@@ -5,6 +5,10 @@ terraform {
       source  = "ovh/ovh"
       version = ">= 1.9.0"
     }
+    cloudflare = {
+      source  = "cloudflare/cloudflare"
+      version = "~> 5.0"
+    }
   }
 }
 
@@ -19,3 +23,7 @@ provider "ovh" {
   application_secret = var.ovh_application_secret
   consumer_key       = var.ovh_consumer_key
 }
+
+# Optional Cloudflare edge resources. Set CLOUDFLARE_API_TOKEN when
+# enable_cloudflare_edge is true; use a token scoped to the target zone.
+provider "cloudflare" {}
