@@ -39,10 +39,17 @@ jobs:
         working-directory: frontend
     steps:
       - uses: actions/checkout@v5
+<<<<<<< Updated upstream
       - uses: pnpm/action-setup@v6
         with:
           version: 12
       - uses: actions/setup-node@v6
+=======
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v5
+>>>>>>> Stashed changes
         with:
           node-version: '24'
           cache: 'pnpm'
@@ -66,10 +73,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+<<<<<<< Updated upstream
       - uses: pnpm/action-setup@v6
         with:
           version: 12
       - uses: actions/setup-node@v6
+=======
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v5
+>>>>>>> Stashed changes
         with:
           node-version: '24'
           cache: 'pnpm'
@@ -84,16 +98,23 @@ jobs:
       - name: Wait for app health
         run: |
           for i in $(seq 1 90); do
-            curl -sf http://localhost:3000/api/health && break
+            if curl -sf http://localhost:3000/api/health; then
+              echo "App is healthy"
+              exit 0
+            fi
+            echo "Attempt $i/90: not healthy yet..."
             sleep 2
           done
-          curl -sf http://localhost:3000/api/health
+          echo "App did not become healthy. Dumping container logs:"
+          docker compose logs
+          docker compose ps -a
+          exit 1
       - name: Run Playwright tests
         run: pnpm exec playwright test
         working-directory: frontend
       - name: Stop app stack
         if: always()
-        run: docker compose down
+        run: docker compose down -v
 
   deploy:
     needs: [test-backend, test-frontend, playwright-e2e]

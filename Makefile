@@ -136,7 +136,7 @@ test-frontend:
 test-playwright:
 	@echo "🧪 Running Playwright e2e against Docker stack (http://localhost:3000)..."
 	@docker compose up -d --build
-	@trap 'docker compose down >/dev/null 2>&1' EXIT INT TERM; \
+	@trap 'docker compose down -v >/dev/null 2>&1' EXIT INT TERM; \
 		echo "⏳ Waiting for app health..."; \
 		for i in $$(seq 1 90); do \
 			curl -sf http://localhost:3000/api/health >/dev/null 2>&1 && break; \

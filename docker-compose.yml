@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Production-like containers (built from Dockerfiles)
   backend:
@@ -13,6 +11,7 @@ services:
       - SECRET_KEY=dev-secret-key
     volumes:
       - ./backend:/app
+      - backend-venv:/app/.venv
     # Use uv run for development with auto-reload
     command: uv run python app.py
 
@@ -62,3 +61,6 @@ services:
       "
     profiles:
       - dev
+
+volumes:
+  backend-venv:
