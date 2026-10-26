@@ -20,7 +20,7 @@ services:
       start_period: 30s
 
   wiki:
-    image: mediawiki:1.43
+    image: mediawiki:1.46.2
     restart: unless-stopped
     expose:
       - "80"

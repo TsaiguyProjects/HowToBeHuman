@@ -1,0 +1,10 @@
+{
+    "require": {
+        "wikimedia/composer-merge-plugin": "^2.1"
+    },
+    "config": {
+        "allow-plugins": {
+            "wikimedia/composer-merge-plugin": true
+        }
+    }
+}

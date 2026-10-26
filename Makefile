@@ -36,6 +36,8 @@ prod-up:
 prod-down:
 	docker compose -f docker-compose.prod.yml down
 
+prod-restart: prod-down prod-up
+
 prod-logs:
 	docker compose -f docker-compose.prod.yml logs --follow --tail=100
 

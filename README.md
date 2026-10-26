@@ -12,7 +12,7 @@ Internet ── :80/443 │    Caddy     │  automatic Let's Encrypt
                     ┌──────────────┐     ┌──────────────┐
                     │     wiki     │────▶│      db      │
                     │ MediaWiki    │     │ MariaDB 11.4 │
-                    │ 1.43 LTS     │     │              │
+                    │ 1.46.2       │     │              │
                     └──────────────┘     └──────────────┘
 ```
 
