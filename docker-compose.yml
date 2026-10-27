@@ -11,9 +11,8 @@ services:
       - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-me}
     volumes:
       - ./backend:/app
-      - backend-venv:/app/.venv
     # Use uv run for development with auto-reload
-    command: uv run python app.py
+    command: uv run --no-sync python app.py
 
   frontend:
     build:
@@ -62,5 +61,3 @@ services:
     profiles:
       - dev
 
-volumes:
-  backend-venv:

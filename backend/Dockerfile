@@ -3,7 +3,8 @@ FROM python:3.13-slim
 
 ENV PYTHONUNBUFFERED=1 \
     UV_LINK_MODE=copy \
-    UV_CACHE_DIR=/tmp/uv-cache
+    UV_CACHE_DIR=/tmp/uv-cache \
+    UV_PROJECT_ENVIRONMENT=/opt/venv
 
 WORKDIR /app
 
@@ -16,25 +17,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy dependency files first for better caching
-# NOTE: run `uv lock` locally once to generate backend/uv.lock, then commit it
 COPY backend/pyproject.toml backend/.python-version ./
 COPY backend/uv.lock* ./
 
-# Install dependencies with uv (uses cache, very fast)
-# --frozen requires uv.lock to exist; falls back to resolving if missing
+# Install dependencies with uv into /opt/venv (outside /app so dev volume mounts don't hide it)
 RUN uv sync --frozen --no-dev
 
 # Copy backend code
 COPY backend/ .
 RUN rm -rf /tmp/uv-cache
 
-# Create non-root user
+# Create non-root user and grant access to venv + app
 RUN useradd --create-home --shell /bin/bash app \
-    && chown -R app:app /app
+    && chown -R app:app /app /opt/venv
 USER app
 
 # Expose port
 EXPOSE 8080
 
 # Run with gunicorn using uv's environment
-CMD ["uv", "run", "--no-dev", "gunicorn", "--bind", "0.0.0.0:8080", "--workers", "2", "--threads", "4", "app:create_app()"]
+CMD ["uv", "run", "--no-dev", "--no-sync", "gunicorn", "--bind", "0.0.0.0:8080", "--workers", "2", "--threads", "4", "app:create_app()"]
