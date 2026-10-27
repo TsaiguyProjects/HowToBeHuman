@@ -7,6 +7,7 @@ VPS_HOST="${VPS_HOST:?Set VPS_HOST to the VPS hostname or IP}"
 VPS_USER="${VPS_USER:?Set VPS_USER to the SSH deployment user}"
 VPS_APP_DIR="${VPS_APP_DIR:-/opt/how-to-be-human}"
 CONTENT_DIR="${CONTENT_DIR:-/srv/how-to-be-human/content}"
+DOMAIN="${DOMAIN:-$VPS_HOST}"
 TAG="${TAG:-$(git rev-parse --short HEAD 2>/dev/null || date -u +%Y%m%dT%H%M%SZ)}"
 SSH_KEY="${VPS_SSH_PRIVATE_KEY_FILE:-$HOME/.ssh/id_ed25519}"
 PLATFORM="${PLATFORM:-linux/amd64}"
@@ -53,10 +54,11 @@ docker save "$BACKEND_IMAGE" "$FRONTEND_IMAGE" | gzip > "$ARCHIVE"
 
 printf 'Transferring application files and images to %s...\n' "$VPS_HOST"
 "${SCP[@]}" docker-compose.prod.yml "$REMOTE:$VPS_APP_DIR/docker-compose.prod.yml"
+"${SCP[@]}" Caddyfile "$REMOTE:$VPS_APP_DIR/Caddyfile"
 "${SCP[@]}" "$ARCHIVE" "$REMOTE:$VPS_APP_DIR/images.tar.gz"
 
 printf 'Loading images and restarting containers (content is preserved)...\n'
 "${SSH[@]}" "$REMOTE" \
-  "cd '$VPS_APP_DIR' && gzip -dc images.tar.gz | docker load && IMAGE_TAG='$TAG' CONTENT_DIR='$CONTENT_DIR' docker compose -f docker-compose.prod.yml up -d --no-build && rm -f images.tar.gz && docker compose -f docker-compose.prod.yml ps"
+  "cd '$VPS_APP_DIR' && gzip -dc images.tar.gz | docker load && IMAGE_TAG='$TAG' CONTENT_DIR='$CONTENT_DIR' DOMAIN='$DOMAIN' docker compose -f docker-compose.prod.yml up -d --no-build && rm -f images.tar.gz && docker compose -f docker-compose.prod.yml ps"
 
 printf 'Deployment complete. Content remains under %s.\n' "$CONTENT_DIR"

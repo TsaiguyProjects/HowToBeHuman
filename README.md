@@ -378,9 +378,13 @@ out of `CONTENT_DIR`; do not edit version directory names in place.
 
 ### Domain and TLS
 
-Point the domain at the VPS public IP. Configure HTTPS with a reverse proxy/TLS
-solution (for example, Caddy or Certbot-managed Nginx) before production use;
-the Compose frontend currently publishes HTTP on port 80.
+Point the domain at the VPS public IP. Production HTTPS is terminated by the
+bundled Caddy reverse proxy (`Caddyfile`), which automatically provisions and
+renews Let's Encrypt certificates for `DOMAIN` (defaults to `VPS_HOST`). Set
+`DOMAIN` (and optionally `VPS_HOST`) in the VPS `.env` / deployment environment
+to your public hostname. Caddy listens on ports 80 and 443 and proxies to the
+frontend container; HTTP is redirected to HTTPS automatically. For local/IP-only
+deployments Caddy falls back to its internal CA (self-signed).
 
 The checked-in `ovh/k8s/` manifests and `ovh/terraform/` definitions describe
 the previous MKS + Managed Private Registry option. The VPS deploy workflow
