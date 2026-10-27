@@ -1,0 +1,7 @@
+# Copy to terraform.tfvars (gitignored) and fill in. Prefer env vars for secrets.
+# ovh_endpoint = "ovh-eu"
+# service_name = "your-public-cloud-project-id"
+# kube_region     = "GRA11"
+# registry_region = "GRA"
+# registry_name   = "how-to-be-human"
+# harbor_project  = "how-to-be-human"   # create in the Harbor UI after apply

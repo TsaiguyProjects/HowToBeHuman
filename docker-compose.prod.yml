@@ -1,0 +1,43 @@
+services:
+  backend:
+    image: how-to-be-human-backend:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    expose:
+      - "8080"
+    environment:
+      PORT: "8080"
+      FLASK_ENV: production
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in the VPS .env file}
+      CONTENT_ROOT: /content
+    volumes:
+      - ${CONTENT_DIR:-/srv/how-to-be-human/content}:/content:ro
+    networks:
+      default:
+        aliases:
+          - backend
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/api/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  frontend:
+    image: how-to-be-human-frontend:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

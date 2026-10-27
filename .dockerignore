@@ -1,0 +1,28 @@
+# Keep Docker build contexts small (both images build from the repo root).
+# Exclude everything the Dockerfiles never COPY.
+.git
+.github
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+*.egg-info/
+
+# JavaScript
+node_modules/
+frontend/node_modules/
+frontend/build/
+frontend/dist/
+
+# Local env / secrets
+.env
+.env.local
+.env.*.local

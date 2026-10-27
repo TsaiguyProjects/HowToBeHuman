@@ -1,0 +1,152 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, ovhcloud]
+  pull_request:
+    branches: [main, ovhcloud]
+
+jobs:
+  test-backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - uses: actions/setup-python@v6
+        with:
+          python-version-file: backend/.python-version
+      - name: Install dependencies
+        run: uv sync --all-groups --locked
+      - name: Run tests
+        run: uv run pytest -v || echo "No tests configured"
+      - name: Coverage gate (100%)
+        run: uv run pytest -m "not e2e" --cov=app --cov-report=term-missing --cov-fail-under=100
+      - name: Lint
+        run: uv run ruff check . || echo "Lint issues found"
+      - name: Type check
+        run: uv run mypy . || echo "Type issues found"
+
+  test-frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v5
+<<<<<<< Updated upstream
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12
+      - uses: actions/setup-node@v6
+=======
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v5
+>>>>>>> Stashed changes
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: frontend
+      - name: Test
+        run: pnpm test
+      - name: Coverage gate (100%)
+        run: pnpm coverage
+      - name: Build
+        run: pnpm run build
+      - name: Lint
+        run: pnpm run lint || echo "No linter configured"
+      - name: Type check
+        run: pnpm run typecheck
+
+  playwright-e2e:
+    needs: [test-backend, test-frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+<<<<<<< Updated upstream
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12
+      - uses: actions/setup-node@v6
+=======
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v5
+>>>>>>> Stashed changes
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install Playwright browser
+        run: pnpm exec playwright install --with-deps chromium
+        working-directory: frontend
+      - name: Start app stack
+        run: docker compose up -d --build
+      - name: Wait for app health
+        run: |
+          for i in $(seq 1 90); do
+            if curl -sf http://localhost:3000/api/health; then
+              echo "App is healthy"
+              exit 0
+            fi
+            echo "Attempt $i/90: not healthy yet..."
+            sleep 2
+          done
+          echo "App did not become healthy. Dumping container logs:"
+          docker compose logs
+          docker compose ps -a
+          exit 1
+      - name: Run Playwright tests
+        run: pnpm exec playwright test
+        working-directory: frontend
+      - name: Stop app stack
+        if: always()
+        run: docker compose down -v
+
+  deploy:
+    needs: [test-backend, test-frontend, playwright-e2e]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/ovhcloud'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ovh-vps-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Configure SSH
+        env:
+          VPS_SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d "$HOME/.ssh"
+          printf '%s\n' "$VPS_SSH_PRIVATE_KEY" > "$HOME/.ssh/id_ed25519"
+          chmod 600 "$HOME/.ssh/id_ed25519"
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+
+      - name: Deploy to OVH VPS
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_APP_DIR: ${{ vars.VPS_APP_DIR }}
+          CONTENT_DIR: ${{ vars.CONTENT_DIR }}
+          TAG: ${{ github.sha }}
+        run: |
+          VPS_APP_DIR="${VPS_APP_DIR:-/opt/how-to-be-human}"
+          CONTENT_DIR="${CONTENT_DIR:-/srv/how-to-be-human/content}"
+          export VPS_APP_DIR CONTENT_DIR
+          export VPS_SSH_PRIVATE_KEY_FILE="$HOME/.ssh/id_ed25519"
+          bash scripts/deploy.sh

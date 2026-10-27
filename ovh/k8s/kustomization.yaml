@@ -1,0 +1,20 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: how-to-be-human
+
+resources:
+  - namespace.yaml
+  - backend.yaml
+  - frontend.yaml
+  - ingress.yaml
+
+# Images are rewritten at deploy time:
+#   cd ovh/k8s && kustomize edit set image backend=<REGISTRY_URL>/how-to-be-human/backend:<TAG>
+images:
+  - name: backend
+    newName: REPLACE_WITH_REGISTRY_URL/how-to-be-human/backend
+    newTag: latest
+  - name: frontend
+    newName: REPLACE_WITH_REGISTRY_URL/how-to-be-human/frontend
+    newTag: latest

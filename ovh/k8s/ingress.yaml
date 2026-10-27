@@ -1,0 +1,40 @@
+# NGINX Ingress for OVHcloud Managed Kubernetes Service.
+# Routes /api/* -> backend, everything else -> frontend.
+# Frontend nginx also proxies /api/ to http://backend:8080, so direct
+# Service-to-Service calls keep working even without an Ingress.
+#
+# Setup (once per cluster):
+#   helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+#   helm repo update
+#   helm -n ingress-nginx install ingress-nginx ingress-nginx/ingress-nginx --create-namespace
+# The controller gets a public LoadBalancer IP; point DNS at it.
+#
+# TLS: create a cert secret (e.g. via cert-manager) and uncomment the tls: block.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: how-to-be-human
+  namespace: how-to-be-human
+spec:
+  ingressClassName: nginx
+  # tls:
+  #   - hosts:
+  #       - REPLACE_WITH_DOMAIN
+  #     secretName: how-to-be-human-tls
+  rules:
+    - http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 8080
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 80
