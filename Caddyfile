@@ -1,4 +1,10 @@
-{$DOMAIN:localhost} {
+{
+    on_demand_tls {
+        ask http://frontend:80/caddy-ask
+    }
+}
+
+(common) {
     reverse_proxy frontend:80
 
     # Security headers (Caddy adds some by default; keep consistent with nginx)
@@ -10,4 +16,19 @@
 
     # Enable compression
     encode gzip
+}
+
+# Primary site: uses automatic HTTPS (Let's Encrypt for public domains,
+# internal CA for localhost/IP-only deployments).
+{$DOMAIN:localhost} {
+    import common
+}
+
+# Fallback for any other host (e.g. accessing by IP when DOMAIN is a hostname):
+# issue an internal (self-signed) certificate on demand instead of failing.
+:443 {
+    tls internal {
+        on_demand
+    }
+    import common
 }
