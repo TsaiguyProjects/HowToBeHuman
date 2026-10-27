@@ -8,12 +8,11 @@ services:
       - "8080:8080"
     environment:
       - FLASK_ENV=development
-      - SECRET_KEY=dev-secret-key
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-me}
     volumes:
       - ./backend:/app
-      - backend-venv:/app/.venv
     # Use uv run for development with auto-reload
-    command: uv run python app.py
+    command: uv run --no-sync python app.py
 
   frontend:
     build:
@@ -36,7 +35,7 @@ services:
       - ./backend:/app
     environment:
       - FLASK_ENV=development
-      - SECRET_KEY=dev-secret-key
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-me}
     command: >
       sh -c "
         pip install uv &&
@@ -62,5 +61,3 @@ services:
     profiles:
       - dev
 
-volumes:
-  backend-venv:

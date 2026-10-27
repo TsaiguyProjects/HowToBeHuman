@@ -24,13 +24,13 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-groups --locked
       - name: Run tests
-        run: uv run pytest -v || echo "No tests configured"
+        run: uv run pytest -v
       - name: Coverage gate (100%)
         run: uv run pytest -m "not e2e" --cov=app --cov-report=term-missing --cov-fail-under=100
       - name: Lint
-        run: uv run ruff check . || echo "Lint issues found"
+        run: uv run ruff check .
       - name: Type check
-        run: uv run mypy . || echo "Type issues found"
+        run: uv run mypy .
 
   test-frontend:
     runs-on: ubuntu-latest
@@ -39,17 +39,10 @@ jobs:
         working-directory: frontend
     steps:
       - uses: actions/checkout@v5
-<<<<<<< Updated upstream
       - uses: pnpm/action-setup@v6
         with:
           version: 12
       - uses: actions/setup-node@v6
-=======
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
-      - uses: actions/setup-node@v5
->>>>>>> Stashed changes
         with:
           node-version: '24'
           cache: 'pnpm'
@@ -64,7 +57,7 @@ jobs:
       - name: Build
         run: pnpm run build
       - name: Lint
-        run: pnpm run lint || echo "No linter configured"
+        run: pnpm run lint
       - name: Type check
         run: pnpm run typecheck
 
@@ -73,17 +66,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-<<<<<<< Updated upstream
       - uses: pnpm/action-setup@v6
         with:
           version: 12
       - uses: actions/setup-node@v6
-=======
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
-      - uses: actions/setup-node@v5
->>>>>>> Stashed changes
         with:
           node-version: '24'
           cache: 'pnpm'

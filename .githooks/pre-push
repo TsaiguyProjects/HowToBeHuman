@@ -40,6 +40,20 @@ if [ "$NEED_BACKEND" = 0 ] && [ "$NEED_FRONTEND" = 0 ]; then
   exit 0
 fi
 
+# Make sure a Node >=20 (needed by pnpm/Vitest) is on PATH even when git is
+# invoked from a shell whose default node is older (e.g. nvm defaulting to v10).
+if ! command -v node >/dev/null 2>&1 || [ "$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0)" -lt 20 ]; then
+  for cand in "$HOME/.nvm/versions/node"/v2*/bin /opt/homebrew/bin /usr/local/bin; do
+    if [ -x "$cand/node" ]; then
+      ver="$("$cand/node" -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0)"
+      if [ "$ver" -ge 20 ] 2>/dev/null; then
+        export PATH="$cand:$PATH"
+        break
+      fi
+    fi
+  done
+fi
+
 require_cmd make "Install build tools: Xcode CLT (macOS) or build-essential (Linux)."
 require_cmd docker "Start the Docker daemon (Docker Desktop) and retry."
 cd "$REPO_ROOT"

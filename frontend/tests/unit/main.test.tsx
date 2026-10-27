@@ -5,6 +5,7 @@ import { HELLO_PAYLOAD, HEALTH_PAYLOAD, stubFetch } from './helpers.ts'
 afterEach(() => {
   cleanup()
   vi.unstubAllGlobals()
+  vi.resetModules()
 })
 
 describe('main entry', () => {
@@ -18,5 +19,10 @@ describe('main entry', () => {
       await screen.findByRole('heading', { name: 'How To Be Human' }),
     ).toBeInTheDocument()
     expect(await screen.findByText('Hello from Flask backend!')).toBeInTheDocument()
+  })
+
+  it('throws when #root is missing', async () => {
+    document.body.innerHTML = ''
+    await expect(import('../../src/main.tsx')).rejects.toThrow('Root element #root not found')
   })
 })

@@ -9,6 +9,7 @@ VPS_APP_DIR="${VPS_APP_DIR:-/opt/how-to-be-human}"
 CONTENT_DIR="${CONTENT_DIR:-/srv/how-to-be-human/content}"
 TAG="${TAG:-$(git rev-parse --short HEAD 2>/dev/null || date -u +%Y%m%dT%H%M%SZ)}"
 SSH_KEY="${VPS_SSH_PRIVATE_KEY_FILE:-$HOME/.ssh/id_ed25519}"
+PLATFORM="${PLATFORM:-linux/amd64}"
 
 for cmd in docker ssh scp; do
   if ! command -v "$cmd" >/dev/null 2>&1; then
@@ -45,9 +46,9 @@ printf 'Checking VPS content directory (read-only app mount): %s\n' "$CONTENT_DI
   exit 1
 }
 
-printf 'Building images for VPS deployment (%s)...\n' "$TAG"
-docker build -f backend/Dockerfile -t "$BACKEND_IMAGE" .
-docker build -f frontend/Dockerfile -t "$FRONTEND_IMAGE" .
+printf 'Building images for VPS deployment (%s) for platform %s...\n' "$TAG" "$PLATFORM"
+docker build --platform "$PLATFORM" -f backend/Dockerfile -t "$BACKEND_IMAGE" .
+docker build --platform "$PLATFORM" -f frontend/Dockerfile -t "$FRONTEND_IMAGE" .
 docker save "$BACKEND_IMAGE" "$FRONTEND_IMAGE" | gzip > "$ARCHIVE"
 
 printf 'Transferring application files and images to %s...\n' "$VPS_HOST"
