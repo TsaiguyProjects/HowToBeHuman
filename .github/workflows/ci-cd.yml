@@ -129,6 +129,7 @@ jobs:
           VPS_USER: ${{ secrets.VPS_USER }}
           VPS_APP_DIR: ${{ vars.VPS_APP_DIR }}
           CONTENT_DIR: ${{ vars.CONTENT_DIR }}
+          DOMAIN: ${{ vars.DOMAIN }}
           TAG: ${{ github.sha }}
         run: |
           VPS_APP_DIR="${VPS_APP_DIR:-/opt/how-to-be-human}"

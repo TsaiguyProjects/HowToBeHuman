@@ -18,7 +18,7 @@ FRONTEND_URL = http://localhost:3000
 # Load deployment variables from .env.deploy if it exists (workstation-only, gitignored).
 # Format: KEY=value (Makefile syntax, no quotes, no 'export').
 -include .env.deploy
-export VPS_HOST VPS_USER VPS_APP_DIR CONTENT_DIR VPS_SSH_PRIVATE_KEY_FILE
+export VPS_HOST VPS_USER VPS_APP_DIR CONTENT_DIR VPS_SSH_PRIVATE_KEY_FILE DOMAIN
 
 # Default target
 help:
