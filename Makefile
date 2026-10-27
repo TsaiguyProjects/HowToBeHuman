@@ -15,6 +15,11 @@ else
 endif
 FRONTEND_URL = http://localhost:3000
 
+# Load deployment variables from .env.deploy if it exists (workstation-only, gitignored).
+# Format: KEY=value (Makefile syntax, no quotes, no 'export').
+-include .env.deploy
+export VPS_HOST VPS_USER VPS_APP_DIR CONTENT_DIR VPS_SSH_PRIVATE_KEY_FILE
+
 # Default target
 help:
 	@echo "HowToBeHuman - Available Commands:"
@@ -197,20 +202,20 @@ deploy:
 
 logs:
 	@echo "📝 Following production logs on the VPS..."
-	ssh "$${VPS_USER:?Set VPS_USER}"@"$${VPS_HOST:?Set VPS_HOST}" "cd '$${VPS_APP_DIR:-/opt/how-to-be-human}' && docker compose -f docker-compose.prod.yml logs --follow --tail=100"
+	ssh -i "$${VPS_SSH_PRIVATE_KEY_FILE:?Set VPS_SSH_PRIVATE_KEY_FILE}" "$${VPS_USER:?Set VPS_USER}"@"$${VPS_HOST:?Set VPS_HOST}" "cd '$${VPS_APP_DIR:-/opt/how-to-be-human}' && docker compose -f docker-compose.prod.yml logs --follow --tail=100"
 
 logs-backend:
-	ssh "$${VPS_USER:?Set VPS_USER}"@"$${VPS_HOST:?Set VPS_HOST}" "cd '$${VPS_APP_DIR:-/opt/how-to-be-human}' && docker compose -f docker-compose.prod.yml logs --follow --tail=100 backend"
+	ssh -i "$${VPS_SSH_PRIVATE_KEY_FILE:?Set VPS_SSH_PRIVATE_KEY_FILE}" "$${VPS_USER:?Set VPS_USER}"@"$${VPS_HOST:?Set VPS_HOST}" "cd '$${VPS_APP_DIR:-/opt/how-to-be-human}' && docker compose -f docker-compose.prod.yml logs --follow --tail=100 backend"
 
 logs-frontend:
-	ssh "$${VPS_USER:?Set VPS_USER}"@"$${VPS_HOST:?Set VPS_HOST}" "cd '$${VPS_APP_DIR:-/opt/how-to-be-human}' && docker compose -f docker-compose.prod.yml logs --follow --tail=100 frontend"
+	ssh -i "$${VPS_SSH_PRIVATE_KEY_FILE:?Set VPS_SSH_PRIVATE_KEY_FILE}" "$${VPS_USER:?Set VPS_USER}"@"$${VPS_HOST:?Set VPS_HOST}" "cd '$${VPS_APP_DIR:-/opt/how-to-be-human}' && docker compose -f docker-compose.prod.yml logs --follow --tail=100 frontend"
 
 status:
 	@echo "📊 App status (OVHcloud VPS):"
-	ssh "$${VPS_USER:?Set VPS_USER}"@"$${VPS_HOST:?Set VPS_HOST}" "cd '$${VPS_APP_DIR:-/opt/how-to-be-human}' && docker compose -f docker-compose.prod.yml ps"
+	ssh -i "$${VPS_SSH_PRIVATE_KEY_FILE:?Set VPS_SSH_PRIVATE_KEY_FILE}" "$${VPS_USER:?Set VPS_USER}"@"$${VPS_HOST:?Set VPS_HOST}" "cd '$${VPS_APP_DIR:-/opt/how-to-be-human}' && docker compose -f docker-compose.prod.yml ps"
 
 status-detail:
-	ssh "$${VPS_USER:?Set VPS_USER}"@"$${VPS_HOST:?Set VPS_HOST}" "cd '$${VPS_APP_DIR:-/opt/how-to-be-human}' && docker compose -f docker-compose.prod.yml ps --all"
+	ssh -i "$${VPS_SSH_PRIVATE_KEY_FILE:?Set VPS_SSH_PRIVATE_KEY_FILE}" "$${VPS_USER:?Set VPS_USER}"@"$${VPS_HOST:?Set VPS_HOST}" "cd '$${VPS_APP_DIR:-/opt/how-to-be-human}' && docker compose -f docker-compose.prod.yml ps --all"
 
 # =============================================================================
 # OVHcloud infrastructure (Terraform)

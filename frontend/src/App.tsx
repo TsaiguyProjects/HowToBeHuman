@@ -28,6 +28,7 @@ function App() {
     async function loadMessage(): Promise<void> {
       try {
         const res = await fetch('/api/hello')
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const data: HelloResponse = await res.json()
         if (!cancelled) {
           setMessage(data.message ?? 'No message received')
@@ -54,6 +55,7 @@ function App() {
     setLoading(true)
     try {
       const res = await fetch('/api/hello')
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data: HelloResponse = await res.json()
       setMessage(data.message ?? 'No message received')
     } catch {
@@ -92,8 +94,11 @@ function HealthCheck() {
 
   useEffect(() => {
     fetch('/api/health')
-      .then((res) => res.json())
-      .then((data: HealthResponse) => setStatus(data.status ?? 'unknown'))
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        return res.json() as Promise<HealthResponse>
+      })
+      .then((data) => setStatus(data.status ?? 'unknown'))
       .catch(() => setStatus('error'))
   }, [])
 

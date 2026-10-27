@@ -22,7 +22,7 @@ COPY backend/uv.lock* ./
 
 # Install dependencies with uv (uses cache, very fast)
 # --frozen requires uv.lock to exist; falls back to resolving if missing
-RUN uv sync --frozen --no-dev || uv sync --no-dev
+RUN uv sync --frozen --no-dev
 
 # Copy backend code
 COPY backend/ .

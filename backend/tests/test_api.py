@@ -276,3 +276,12 @@ def test_content_route_rejects_non_utf8_document(content_app: Flask, content_roo
     response = content_app.test_client().get(f"/api/content/{version}/invalid.md")
 
     assert response.status_code == 404
+
+
+def test_create_app_requires_secret_key_in_production(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("FLASK_ENV", "production")
+    monkeypatch.delenv("SECRET_KEY", raising=False)
+    with pytest.raises(RuntimeError, match="SECRET_KEY must be set in production"):
+        from app import create_app
+
+        create_app()

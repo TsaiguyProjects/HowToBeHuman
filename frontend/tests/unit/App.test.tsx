@@ -158,4 +158,71 @@ describe('App', () => {
     // Let the rejected promises settle; nothing should throw.
     await waitFor(() => expect(true).toBe(true))
   })
+
+  it('shows an error when the initial greeting response is not ok', async () => {
+    // Return a non-ok Response-like object for hello
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: string | URL | Request) => {
+        const url = String(input)
+        if (url.endsWith('/api/content')) {
+          return { ok: true, status: 200, json: async () => CONTENT_PAYLOAD } as Response
+        }
+        if (url.endsWith('/api/health')) {
+          return { ok: true, status: 200, json: async () => HEALTH_PAYLOAD } as Response
+        }
+        return { ok: false, status: 500, json: async () => ({}) } as Response
+      }),
+    )
+    render(<App />)
+
+    expect(await screen.findByText('Error connecting to backend')).toBeInTheDocument()
+  })
+
+  it('shows an error when a refreshed greeting response is not ok', async () => {
+    let calls = 0
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: string | URL | Request) => {
+        const url = String(input)
+        if (url.endsWith('/api/content')) {
+          return { ok: true, status: 200, json: async () => CONTENT_PAYLOAD } as Response
+        }
+        if (url.endsWith('/api/health')) {
+          return { ok: true, status: 200, json: async () => HEALTH_PAYLOAD } as Response
+        }
+        calls += 1
+        if (calls > 1) {
+          return { ok: false, status: 500, json: async () => ({}) } as Response
+        }
+        return { ok: true, status: 200, json: async () => HELLO_PAYLOAD } as Response
+      }),
+    )
+    render(<App />)
+
+    await screen.findByText('Hello from Flask backend!')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }))
+
+    expect(await screen.findByText('Error connecting to backend')).toBeInTheDocument()
+  })
+
+  it('shows an error health status when the health response is not ok', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: string | URL | Request) => {
+        const url = String(input)
+        if (url.endsWith('/api/content')) {
+          return { ok: true, status: 200, json: async () => CONTENT_PAYLOAD } as Response
+        }
+        if (url.endsWith('/api/health')) {
+          return { ok: false, status: 503, json: async () => ({}) } as Response
+        }
+        return { ok: true, status: 200, json: async () => HELLO_PAYLOAD } as Response
+      }),
+    )
+    render(<App />)
+
+    expect(await screen.findByText('error')).toBeInTheDocument()
+  })
 })

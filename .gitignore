@@ -38,6 +38,8 @@ frontend/dist/
 .env
 .env.local
 .env.*.local
+# Deployment variables (workstation-only, never commit)
+.env.deploy
 
 # OVHcloud / Terraform / k8s (secrets + local state, never commit)
 ovh/k8s/secret.yaml

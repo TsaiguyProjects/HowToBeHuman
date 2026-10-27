@@ -6,6 +6,7 @@ from pathlib import Path
 from flask import Flask, Response, jsonify, send_from_directory
 from flask_cors import CORS
 from werkzeug import Response as WerkzeugResponse
+from werkzeug.exceptions import NotFound
 
 CONTENT_VERSION_PATTERN = re.compile(r"^\d{8}T\d{6}Z$")
 CONTENT_SUFFIXES = frozenset({".md", ".mmd", ".markdown"})
@@ -56,10 +57,16 @@ def _content_file(directory: Path, document_path: str) -> Path | None:
 
 def create_app(static_folder: str | None = None) -> Flask:
     app = Flask(__name__, static_folder=static_folder or "../frontend/build")
-    CORS(app)
+    cors_origins = os.environ.get("CORS_ORIGINS", "http://localhost:3000")
+    CORS(app, origins=[o.strip() for o in cors_origins.split(",") if o.strip()])
 
     # Configuration
-    app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-change-in-production")
+    secret_key = os.environ.get("SECRET_KEY")
+    if not secret_key:
+        if os.environ.get("FLASK_ENV") == "production":
+            raise RuntimeError("SECRET_KEY must be set in production")
+        secret_key = "dev-secret-change-in-production"
+    app.config["SECRET_KEY"] = secret_key
     app.config["CONTENT_ROOT"] = os.environ.get("CONTENT_ROOT", "/content")
 
     # API Routes
@@ -115,6 +122,7 @@ def create_app(static_folder: str | None = None) -> Flask:
         response = Response(markdown, mimetype="text/markdown")
         response.headers["X-Content-Version"] = version
         response.headers["Cache-Control"] = "no-cache"
+        response.headers["X-Content-Type-Options"] = "nosniff"
         return response
 
     # Serve React frontend for all non-API routes
@@ -128,8 +136,11 @@ def create_app(static_folder: str | None = None) -> Flask:
         if static_folder is None:
             return jsonify({"error": "Frontend not built"}), 404
 
-        if os.path.isfile(os.path.join(static_folder, path)):
-            return send_from_directory(static_folder, path)
+        if path:
+            try:
+                return send_from_directory(static_folder, path)
+            except (OSError, ValueError, NotFound):
+                pass
 
         index_path = os.path.join(static_folder, "index.html")
         if os.path.isfile(index_path):

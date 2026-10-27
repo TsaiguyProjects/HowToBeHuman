@@ -323,6 +323,8 @@ services. It never copies, replaces, or removes the external content directory.
 
 ### Manual deploy from a workstation
 
+Option 1 — export variables in your shell:
+
 ```bash
 export VPS_HOST=your-vps.example.net
 export VPS_USER=deploy
@@ -331,6 +333,19 @@ export VPS_APP_DIR=/opt/how-to-be-human
 export CONTENT_DIR=/srv/how-to-be-human/content
 make deploy
 ```
+
+Option 2 — use a `.env.deploy` file (recommended, avoids re-exporting):
+
+```bash
+cp .env.deploy.example .env.deploy
+# Edit .env.deploy with your values, then:
+make deploy
+make status
+make logs
+```
+
+The Makefile automatically loads `.env.deploy` if it exists. The file is gitignored
+(`.env.deploy`), so secrets stay local. See `.env.deploy.example` for the format.
 
 The SSH identity defaults to `~/.ssh/id_ed25519`; override it with
 `VPS_SSH_PRIVATE_KEY_FILE`. The script builds tagged Docker images locally,
