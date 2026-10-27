@@ -59,6 +59,6 @@ printf 'Transferring application files and images to %s...\n' "$VPS_HOST"
 
 printf 'Loading images and restarting containers (content is preserved)...\n'
 "${SSH[@]}" "$REMOTE" \
-  "cd '$VPS_APP_DIR' && gzip -dc images.tar.gz | docker load && IMAGE_TAG='$TAG' CONTENT_DIR='$CONTENT_DIR' DOMAIN='$DOMAIN' docker compose -f docker-compose.prod.yml up -d --no-build && rm -f images.tar.gz && docker compose -f docker-compose.prod.yml ps"
+  "cd '$VPS_APP_DIR' && gzip -dc images.tar.gz | docker load && IMAGE_TAG='$TAG' CONTENT_DIR='$CONTENT_DIR' DOMAIN='$DOMAIN' docker compose -f docker-compose.prod.yml up -d --no-build && IMAGE_TAG='$TAG' CONTENT_DIR='$CONTENT_DIR' DOMAIN='$DOMAIN' docker compose -f docker-compose.prod.yml up -d --no-build --force-recreate caddy && rm -f images.tar.gz && docker compose -f docker-compose.prod.yml ps"
 
 printf 'Deployment complete. Content remains under %s.\n' "$CONTENT_DIR"
