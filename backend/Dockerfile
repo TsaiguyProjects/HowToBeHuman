@@ -21,6 +21,10 @@ COPY backend/pyproject.toml backend/.python-version ./
 COPY backend/uv.lock* ./
 
 # Install dependencies with uv into /opt/venv (outside /app so dev volume mounts don't hide it)
+<<<<<<< HEAD
+# --frozen requires uv.lock to exist; falls back to resolving if missing
+=======
+>>>>>>> 30fb951 (Fix backend container startup permission issue in CI)
 RUN uv sync --frozen --no-dev
 
 # Copy backend code
