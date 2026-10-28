@@ -28,6 +28,33 @@ def test_unknown_api_route_returns_json_404(client: FlaskClient) -> None:
     assert resp.get_json() == {"error": "Not found"}
 
 
+def test_bare_api_route_returns_json_404(client: FlaskClient) -> None:
+    resp = client.get("/api")
+    assert resp.status_code == 404
+    assert resp.is_json
+    assert resp.get_json() == {"error": "Not found"}
+
+
+def test_caddy_ask_accepts_ip_address(client: FlaskClient) -> None:
+    resp = client.get("/api/caddy-ask?domain=127.0.0.1")
+    assert resp.status_code == 200
+    assert resp.get_json() == {"status": "ok"}
+
+
+def test_caddy_ask_rejects_domain_name(client: FlaskClient) -> None:
+    resp = client.get("/api/caddy-ask?domain=example.com")
+    assert resp.status_code == 403
+    assert resp.get_json() == {"error": "Forbidden"}
+
+
+def test_secret_key_loaded_from_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SECRET_KEY", "from-environment")
+    from app import create_app
+
+    app = create_app()
+    assert app.config["SECRET_KEY"] == "from-environment"
+
+
 def test_spa_index_served_at_root(build_client: FlaskClient) -> None:
     resp = build_client.get("/")
     assert resp.status_code == 200

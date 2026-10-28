@@ -100,6 +100,7 @@ addopts = "-v --tb=short"
 [tool.coverage.run]
 source = ["app"]
 omit = ["tests/*"]
+branch = true
 
 [tool.coverage.report]
 # Coverage gate: `make test-backend-coverage` and CI fail below this.

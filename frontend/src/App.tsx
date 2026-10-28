@@ -93,13 +93,23 @@ function HealthCheck() {
   const [status, setStatus] = useState<HealthStatus>('unknown')
 
   useEffect(() => {
+    let cancelled = false
+
     fetch('/api/health')
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         return res.json() as Promise<HealthResponse>
       })
-      .then((data) => setStatus(data.status ?? 'unknown'))
-      .catch(() => setStatus('error'))
+      .then((data) => {
+        if (!cancelled) setStatus(data.status ?? 'unknown')
+      })
+      .catch(() => {
+        if (!cancelled) setStatus('error')
+      })
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   return (

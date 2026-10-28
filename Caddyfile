@@ -1,6 +1,6 @@
 {
     on_demand_tls {
-        ask http://frontend:80/caddy-ask
+        ask http://backend:8080/api/caddy-ask
     }
 }
 
