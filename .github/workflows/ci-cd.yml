@@ -100,7 +100,7 @@ jobs:
         run: docker compose down -v
 
   deploy:
-    needs: [test-backend, test-frontend]
+    needs: [test-backend, test-frontend, playwright-e2e]
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/ovhcloud'
     runs-on: ubuntu-latest
     concurrency:
