@@ -27,7 +27,9 @@ services:
 
   # Development containers with hot reload
   backend-dev:
-    image: python:3.13-slim
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     working_dir: /app
     ports:
       - "8080:8080"
@@ -36,22 +38,20 @@ services:
     environment:
       - FLASK_ENV=development
       - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-me}
-    command: >
-      sh -c "
-        pip install uv &&
-        uv sync --all-groups &&
-        uv run python app.py
-      "
+    command: uv run python app.py
     profiles:
       - dev
 
   frontend-dev:
-    image: node:24-alpine
-    working_dir: /app
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      target: builder
+    working_dir: /app/frontend
     ports:
       - "3000:3000"
     volumes:
-      - ./frontend:/app
+      - ./frontend:/app/frontend
     command: >
       sh -c "
         corepack enable &&

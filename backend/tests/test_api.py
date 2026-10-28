@@ -103,7 +103,7 @@ def test_content_index_returns_503_without_content(content_app: Flask) -> None:
 def test_content_index_returns_503_when_content_root_is_missing(
     content_app: Flask, tmp_path: Path
 ) -> None:
-    content_app.config["CONTENT_ROOT"] = str(tmp_path / "not-mounted")
+    content_app.config["CONTENT_DIR"] = str(tmp_path / "not-mounted")
 
     response = content_app.test_client().get("/api/content")
 

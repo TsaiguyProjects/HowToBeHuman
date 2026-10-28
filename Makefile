@@ -256,10 +256,6 @@ db-shell:
 	@echo "🗄️  Managed DB shell: use the OVHcloud console (Public Cloud > Databases) or:"
 	@echo "psql \"$$DATABASE_URL\""
 
-db-migrate:
-	@echo "🗄️  Running database migrations..."
-	cd backend && uv run flask db upgrade 2>/dev/null || echo "Flask-Migrate not configured"
-
 # =============================================================================
 # Maintenance
 # =============================================================================

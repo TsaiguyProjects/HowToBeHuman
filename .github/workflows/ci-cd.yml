@@ -23,10 +23,8 @@ jobs:
           python-version-file: backend/.python-version
       - name: Install dependencies
         run: uv sync --all-groups --locked
-      - name: Run tests
-        run: uv run pytest -v
-      - name: Coverage gate (100%)
-        run: uv run pytest -m "not e2e" --cov=app --cov-report=term-missing --cov-fail-under=100
+      - name: Run tests + coverage gate (100%)
+        run: uv run pytest -v --cov=app --cov-report=term-missing --cov-fail-under=100
       - name: Lint
         run: uv run ruff check .
       - name: Type check
@@ -50,9 +48,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
         working-directory: frontend
-      - name: Test
-        run: pnpm test
-      - name: Coverage gate (100%)
+      - name: Test + coverage gate (100%)
         run: pnpm coverage
       - name: Build
         run: pnpm run build

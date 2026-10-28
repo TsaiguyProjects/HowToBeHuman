@@ -14,17 +14,6 @@ dependencies = [
     "python-dotenv==1.2.4",
 ]
 
-[project.optional-dependencies]
-dev = [
-    "ruff==0.17.2",
-    "black==26.10.1",
-    "pytest==9.1.1",
-    "pytest-cov==7.1.0",
-    "mypy==2.4.0",
-    "testcontainers==4.15.0",
-    "requests==2.34.2",
-]
-
 # uv dependency groups (modern way, mirrors optional-dependencies)
 # Install with: uv sync --group dev  OR  uv sync --all-groups
 [dependency-groups]

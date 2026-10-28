@@ -11,7 +11,7 @@ services:
       PORT: "8080"
       FLASK_ENV: production
       SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in the VPS .env file}
-      CONTENT_ROOT: /content
+      CONTENT_DIR: /content
     volumes:
       - ${CONTENT_DIR:-/srv/how-to-be-human/content}:/content:ro
     networks:

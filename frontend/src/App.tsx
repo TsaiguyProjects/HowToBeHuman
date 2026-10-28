@@ -18,6 +18,13 @@ const STATUS_COLORS: Record<HealthStatus, string> = {
   unknown: '#f59e0b',
 }
 
+async function fetchHello(): Promise<string> {
+  const res = await fetch('/api/hello')
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  const data: HelloResponse = await res.json()
+  return data.message ?? 'No message received'
+}
+
 function App() {
   const [message, setMessage] = useState<string>('')
   const [loading, setLoading] = useState<boolean>(true)
@@ -27,20 +34,12 @@ function App() {
 
     async function loadMessage(): Promise<void> {
       try {
-        const res = await fetch('/api/hello')
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        const data: HelloResponse = await res.json()
-        if (!cancelled) {
-          setMessage(data.message ?? 'No message received')
-        }
+        const msg = await fetchHello()
+        if (!cancelled) setMessage(msg)
       } catch {
-        if (!cancelled) {
-          setMessage('Error connecting to backend')
-        }
+        if (!cancelled) setMessage('Error connecting to backend')
       } finally {
-        if (!cancelled) {
-          setLoading(false)
-        }
+        if (!cancelled) setLoading(false)
       }
     }
 
@@ -54,10 +53,8 @@ function App() {
   const fetchMessage = async (): Promise<void> => {
     setLoading(true)
     try {
-      const res = await fetch('/api/hello')
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const data: HelloResponse = await res.json()
-      setMessage(data.message ?? 'No message received')
+      const msg = await fetchHello()
+      setMessage(msg)
     } catch {
       setMessage('Error connecting to backend')
     } finally {
@@ -95,17 +92,18 @@ function HealthCheck() {
   useEffect(() => {
     let cancelled = false
 
-    fetch('/api/health')
-      .then((res) => {
+    async function loadStatus(): Promise<void> {
+      try {
+        const res = await fetch('/api/health')
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        return res.json() as Promise<HealthResponse>
-      })
-      .then((data) => {
+        const data: HealthResponse = await res.json()
         if (!cancelled) setStatus(data.status ?? 'unknown')
-      })
-      .catch(() => {
+      } catch {
         if (!cancelled) setStatus('error')
-      })
+      }
+    }
+
+    void loadStatus()
 
     return () => {
       cancelled = true

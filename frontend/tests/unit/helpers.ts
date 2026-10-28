@@ -34,3 +34,21 @@ export function stubFetchWith(
   vi.stubGlobal('fetch', fetchMock)
   return fetchMock
 }
+
+export function jsonResponse(payload: unknown, ok = true): Response {
+  return {
+    ok,
+    status: ok ? 200 : 503,
+    json: async () => payload,
+    text: async () => JSON.stringify(payload),
+  } as Response
+}
+
+export function textResponse(payload: string, ok = true): Response {
+  return {
+    ok,
+    status: ok ? 200 : 404,
+    json: async () => ({}),
+    text: async () => payload,
+  } as Response
+}
