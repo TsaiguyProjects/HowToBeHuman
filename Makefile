@@ -95,7 +95,7 @@ build:
 
 test:
 	@echo "🧪 Running backend tests with uv (unit + e2e, needs Docker for e2e)..."
-	cd backend && uv run pytest -v --tb=short --cov=app --cov-report=term-missing --cov-report=html
+	cd backend && uv run pytest -v --tb=short --cov=app --cov-report=term-missing --cov-report=html --cov-fail-under=100
 	@echo "🧪 Running frontend tests with pnpm..."
 	cd frontend && pnpm coverage
 	@$(MAKE) test-playwright
@@ -104,7 +104,12 @@ test-unit: test-backend test-frontend
 
 test-e2e:
 	@echo "🧪 Running end-to-end tests against real Docker images..."
-	cd backend && uv run pytest -m e2e -v --cov=app --cov-report=term-missing --cov-report=html
+	# No --cov/--cov-fail-under here: E2E tests drive the app in separate Docker
+	# containers, so pytest-cov only sees the test process (imports `app`, ~10%
+	# coverage) — a meaningless gate. To measure real E2E coverage, collect it
+	# inside the container (e.g. run coverage in the container entrypoint) and
+	# aggregate the report.
+	cd backend && uv run pytest -m e2e -v
 
 test-playwright:
 	@echo "🧪 Running Playwright e2e against Docker stack (http://localhost:3000)..."
@@ -120,7 +125,7 @@ test-playwright:
 
 test-backend:
 	@echo "🧪 Running backend unit tests only..."
-	cd backend && uv run pytest -m "not e2e" -v --cov=app --cov-report=term-missing --cov-report=html
+	cd backend && uv run pytest -m "not e2e" -v --cov=app --cov-report=term-missing --cov-report=html --cov-fail-under=100
 
 test-frontend:
 	@echo "🧪 Running frontend tests with pnpm..."

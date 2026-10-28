@@ -30,10 +30,10 @@ export default defineConfig({
       exclude: ['src/vite-env.d.ts'],
       // Coverage gate: `pnpm coverage` and CI fail below these thresholds.
       thresholds: {
-        lines: 95,
-        functions: 95,
-        branches: 95,
-        statements: 95,
+        lines: 100,
+        functions: 100,
+        branches: 100,
+        statements: 100,
       },
     },
   },

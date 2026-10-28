@@ -93,7 +93,7 @@ branch = true
 
 [tool.coverage.report]
 # Coverage gate: `make test-backend-coverage` and CI fail below this.
-fail_under = 95
+fail_under = 100
 show_missing = true
 skip_covered = true
 exclude_lines = [
