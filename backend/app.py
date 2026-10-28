@@ -6,7 +6,6 @@ from pathlib import Path
 
 from flask import Flask, Response, jsonify, request, send_from_directory
 from flask_cors import CORS
-from werkzeug import Response as WerkzeugResponse
 from werkzeug.exceptions import NotFound
 
 CONTENT_VERSION_PATTERN = re.compile(r"^\d{8}T\d{6}Z$")
@@ -43,6 +42,10 @@ def _latest_content_directory(content_root: str) -> tuple[str, Path] | None:
     return latest.name, latest
 
 
+def _content_root(app: Flask) -> Path:
+    return Path(app.config["CONTENT_DIR"])
+
+
 def _content_file(directory: Path, document_path: str) -> Path | None:
     candidate = directory / document_path
     try:
@@ -71,33 +74,29 @@ def create_app(static_folder: str | None = None) -> Flask:
             raise RuntimeError("SECRET_KEY must be set in production")
         secret_key = "dev-secret-change-in-production"
     app.config["SECRET_KEY"] = secret_key
-    app.config["CONTENT_ROOT"] = (
-        os.environ.get("CONTENT_ROOT")
-        or os.environ.get("CONTENT_DIR")
-        or "/content"
-    )
+    app.config["CONTENT_DIR"] = os.environ.get("CONTENT_DIR", "/content")
 
     # API Routes
     @app.route("/api/health")
-    def health_check() -> WerkzeugResponse:
+    def health_check() -> Response:
         return jsonify({"status": "healthy", "service": "flask-backend"})
 
     @app.route("/api/hello")
-    def hello() -> WerkzeugResponse:
+    def hello() -> Response:
         return jsonify({"message": "Hello from Flask backend!"})
 
     @app.route("/api/caddy-ask")
-    def caddy_ask() -> WerkzeugResponse | tuple[WerkzeugResponse, int]:
-        domain = request.args.get("domain", "")
+    def caddy_ask() -> Response | tuple[Response, int]:
+        host = request.args.get("domain", "")
         try:
-            ipaddress.ip_address(domain)
+            ipaddress.ip_address(host)
         except ValueError:
             return jsonify({"error": "Forbidden"}), 403
         return jsonify({"status": "ok"})
 
     @app.route("/api/content")
-    def list_content() -> WerkzeugResponse | tuple[WerkzeugResponse, int]:
-        latest = _latest_content_directory(app.config["CONTENT_ROOT"])
+    def list_content() -> Response | tuple[Response, int]:
+        latest = _latest_content_directory(str(_content_root(app)))
         if latest is None:
             return jsonify({"error": "Content is not available"}), 503
 
@@ -119,11 +118,11 @@ def create_app(static_folder: str | None = None) -> Flask:
     @app.route("/api/content/<version>/<path:document_path>")
     def get_content(
         version: str, document_path: str
-    ) -> WerkzeugResponse | tuple[WerkzeugResponse, int]:
+    ) -> Response | tuple[Response, int]:
         if not _is_content_version(version):
             return jsonify({"error": "Content document not found"}), 404
 
-        directory = Path(app.config["CONTENT_ROOT"]) / version
+        directory = _content_root(app) / version
         if not directory.is_dir() or directory.is_symlink():
             return jsonify({"error": "Content document not found"}), 404
 
@@ -142,13 +141,16 @@ def create_app(static_folder: str | None = None) -> Flask:
         response.headers["X-Content-Type-Options"] = "nosniff"
         return response
 
+    # Explicit 404s for the API namespace (never fall through to the SPA).
+    @app.route("/api")
+    @app.route("/api/<path:_path>")
+    def api_not_found(_path: str = "") -> tuple[Response, int]:
+        return jsonify({"error": "Not found"}), 404
+
     # Serve React frontend for all non-API routes
     @app.route("/", defaults={"path": ""})
     @app.route("/<path:path>")
-    def serve_frontend(path: str) -> WerkzeugResponse | tuple[WerkzeugResponse, int]:
-        if path == "api" or path.startswith("api/"):
-            return jsonify({"error": "Not found"}), 404
-
+    def serve_frontend(path: str) -> Response | tuple[Response, int]:
         static_folder = app.static_folder
         if static_folder is None:
             return jsonify({"error": "Frontend not built"}), 404

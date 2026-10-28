@@ -30,13 +30,13 @@ def content_app(tmp_path: Path) -> Flask:
     content_root = tmp_path / "content"
     content_root.mkdir()
     app = create_app(static_folder=str(tmp_path))
-    app.config["CONTENT_ROOT"] = str(content_root)
+    app.config["CONTENT_DIR"] = str(content_root)
     return app
 
 
 @pytest.fixture()
 def content_root(content_app: Flask) -> Path:
-    return Path(content_app.config["CONTENT_ROOT"])
+    return Path(content_app.config["CONTENT_DIR"])
 
 
 @pytest.fixture()

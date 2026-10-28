@@ -125,12 +125,11 @@ The project includes a `Makefile` that consolidates common development and deplo
 |---------|-------------|
 | `make install` | Install all dependencies (`uv sync` + `pnpm install`) |
 | `make dev` | Start full dev environment with Docker Compose |
-| `make dev-backend` | Start backend only (`uv run python app.py`) |
-| `make dev-frontend` | Start frontend only with hot reload (`pnpm run dev`) |
 | `make dev-docker` | Start hot-reload containers in Docker |
 | `make build` | Build production Docker images |
-| `make test` | Run all tests (`uv run pytest` + `pnpm test`) |
-| `make test-backend-unit` | Backend unit tests only (no Docker needed) |
+| `make test` | Run all tests with coverage (backend unit+e2e + frontend) |
+| `make test-backend` | Backend unit tests only (no Docker needed) |
+| `make test-unit` | Backend + frontend unit tests with coverage |
 | `make test-e2e` | Backend e2e tests (testcontainers, needs Docker) |
 | `make lint` | Run all linters (`uv run ruff` + `pnpm lint`) |
 | `make format` | Format code (`uv run black` + `pnpm format`) |
@@ -151,8 +150,7 @@ make install
 make dev
 
 # Or run services individually
-make dev-backend      # Backend on :8080
-make dev-frontend     # Frontend on :3000 (hot reload)
+make dev-docker       # Hot-reload containers in Docker
 
 # Code quality
 make lint             # Check for issues
@@ -165,9 +163,10 @@ make type-check       # mypy + tsc
 
 ```bash
 make test             # Everything: backend (unit + e2e) + frontend unit
-make test-backend-unit  # Backend unit tests only (fast, no Docker needed)
-make test-e2e           # Backend e2e only (needs Docker, builds real images)
-make test-frontend      # Frontend unit tests (Vitest + Testing Library)
+make test-backend     # Backend unit tests only (fast, no Docker needed)
+make test-unit        # Backend + frontend unit tests with coverage
+make test-e2e         # Backend e2e only (needs Docker, builds real images)
+make test-frontend    # Frontend unit tests (Vitest + Testing Library)
 make test-playwright    # Playwright e2e (boots Docker stack + real browser)
 ```
 
@@ -194,18 +193,24 @@ make test-playwright    # Playwright e2e (boots Docker stack + real browser)
 - Cross-service integration is additionally covered by the backend e2e suite,
   which serves the real built frontend bundle.
 
-### Coverage Gates (100% enforced)
+### Coverage Gates (unit tests: 100% enforced)
 
-Both suites fail below 100% statements/lines/functions (and branches, frontend):
+Unit suites fail below 100% statements/lines/functions (and branches, frontend).
+E2E tests do not carry a coverage gate (see note below):
 
 ```bash
-make test-backend-coverage   # pytest + pytest-cov (fail_under in pyproject.toml)
-make test-frontend-coverage  # vitest --coverage (thresholds in vite.config.ts)
+make test-backend   # pytest + pytest-cov (fail_under in pyproject.toml)
+make test-frontend  # vitest --coverage (thresholds in vite.config.ts)
 ```
 
 - Backend excludes only the `if __name__ == "__main__":` runner block.
 - Frontend measures `src/**` (entry `main.tsx` included — tested, not excluded).
-- New code must arrive with tests; CI runs both gates on every push/PR.
+- E2E (`make test-e2e`) runs with coverage reporting but no fail-under: those
+  tests drive the app inside separate Docker containers, so pytest-cov only sees
+  the test process (which imports `app`, ~10% coverage) — a meaningless gate.
+  To measure real E2E coverage, collect it inside the container (e.g. run
+  coverage in the container entrypoint/gunicorn) and aggregate the report.
+- New code must arrive with tests; CI runs both unit gates on every push/PR.
 
 ### Git Hooks
 
@@ -220,8 +225,9 @@ your changes — backend-only commits skip frontend tests and vice versa.
 
 Scope rules: `backend/**` → backend suites; `frontend/**` (+ root
 `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `.npmrc`) → frontend suites; infra
-(`Makefile`, `docker-compose.yml`, `ovh/`, `scripts/`, `.githooks/`,
-`.github/`, `.dockerignore`) → everything.
+(`Makefile`, `docker-compose.yml`, `ovh/`, `scripts/`, `.github/`,
+`.dockerignore`) → everything. (Edits under `.githooks/` no longer trigger
+suites.)
 
 Notes:
 - Hooks call the same `make` targets as CI, so local and remote checks match.

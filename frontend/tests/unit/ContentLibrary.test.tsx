@@ -1,29 +1,11 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import ContentLibrary from '../../src/ContentLibrary'
-import { selectDocumentPath } from '../../src/selectDocumentPath'
+import { jsonResponse, textResponse } from './helpers.ts'
 
 interface ContentIndex {
   version: string
   documents: string[]
-}
-
-function jsonResponse(payload: unknown, ok = true): Response {
-  return {
-    ok,
-    status: ok ? 200 : 503,
-    json: async () => payload,
-    text: async () => JSON.stringify(payload),
-  } as Response
-}
-
-function textResponse(payload: string, ok = true): Response {
-  return {
-    ok,
-    status: ok ? 200 : 404,
-    json: async () => ({}),
-    text: async () => payload,
-  } as Response
 }
 
 function setupContentApi(index: ContentIndex, documents: Record<string, string>) {
@@ -49,22 +31,6 @@ afterEach(() => {
 })
 
 describe('ContentLibrary', () => {
-  it('preserves the selected path when the refreshed index still includes it', () => {
-    expect(selectDocumentPath('chapter.mmd', ['index.mmd', 'chapter.mmd'])).toBe('chapter.mmd')
-  })
-
-  it('selects the first path if the selected document is no longer published', () => {
-    expect(selectDocumentPath('old.mmd', ['new.mmd'])).toBe('new.mmd')
-  })
-
-  it('selects the first path when no document was selected yet', () => {
-    expect(selectDocumentPath(null, ['index.mmd'])).toBe('index.mmd')
-  })
-
-  it('returns null when the current and published document lists are empty', () => {
-    expect(selectDocumentPath(null, [])).toBeNull()
-  })
-
   it('loads and renders the first published markdown document', async () => {
     const version = '20261025T120000Z'
     const fetchMock = setupContentApi(

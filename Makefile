@@ -27,24 +27,16 @@ help:
 	@echo "Development:"
 	@echo "  make install        Install all dependencies (backend + frontend)"
 	@echo "  make dev            Start development environment with Docker Compose"
-	@echo "  make dev-backend    Start only backend dev server (uv)"
-	@echo "  make dev-frontend   Start only frontend dev server (pnpm, hot reload)"
 	@echo "  make dev-docker     Start dev environment in Docker (hot reload)"
 	@echo "  make build          Build production Docker images"
 	@echo ""
 	@echo "Testing & Quality:"
-	@echo "  make test           Run all tests"
-	@echo "  make test-backend   Run backend tests (unit + e2e)"
-	@echo "  make test-e2e       Run e2e tests only (real Docker images)"
-	@echo "  make test-frontend  Run frontend tests (pnpm test)"
+	@echo "  make test           Run all tests with coverage"
+	@echo "  make test-unit      Run all unit tests with coverage (excludes e2e)"
+	@echo "  make test-e2e       Run e2e tests only (real Docker images) with coverage"
 	@echo "  make test-playwright Run Playwright e2e (Docker stack + browser)"
-	@echo "  make test-backend-coverage  Backend coverage gate (100%)"
-	@echo "  make test-frontend-coverage Frontend coverage gate (100%)"
-	@echo "  make lint           Run all linters"
-	@echo "  make lint-backend   Run backend linter (uv run ruff)"
-	@echo "  make lint-frontend  Run frontend linter (pnpm lint)"
+	@echo "  make lint           Run all linters and type checkers (mypy + tsc)"
 	@echo "  make format         Format code (uv run black + pnpm format)"
-	@echo "  make type-check     Run type checkers (mypy + tsc)"
 	@echo ""
 	@echo "Deployment:"
 	@echo "  make deploy         Build and deploy containers to the OVHcloud VPS over SSH"
@@ -66,13 +58,9 @@ help:
 # Development
 # =============================================================================
 
-install: install-backend install-frontend
-
-install-backend:
+install:
 	@echo "📦 Installing backend dependencies with uv..."
 	cd backend && uv sync --all-groups
-
-install-frontend:
 	@echo "📦 Installing frontend dependencies with pnpm..."
 	cd frontend && pnpm install
 
@@ -86,15 +74,6 @@ dev:
 	@echo "🚀 Starting development environment (production-like)..."
 	@$(MAKE) open-frontend
 	docker-compose up --build
-
-dev-backend:
-	@echo "🚀 Starting backend dev server with uv..."
-	cd backend && uv run python app.py
-
-dev-frontend:
-	@echo "🚀 Starting frontend dev server with pnpm..."
-	@$(MAKE) open-frontend
-	cd frontend && pnpm run dev
 
 dev-docker:
 	@echo "🚀 Starting development environment in Docker (hot reload)..."
@@ -110,33 +89,27 @@ build:
 	@echo "🏗️  Building production Docker images..."
 	docker-compose build
 
-build-backend:
-	docker build -f backend/Dockerfile -t how-to-be-human-backend .
-
-build-frontend:
-	docker build -f frontend/Dockerfile -t how-to-be-human-frontend .
-
 # =============================================================================
 # Testing
 # =============================================================================
 
-test: test-backend test-frontend
-
-test-backend:
+test:
 	@echo "🧪 Running backend tests with uv (unit + e2e, needs Docker for e2e)..."
-	cd backend && uv run pytest -v --tb=short
+	cd backend && uv run pytest -v --tb=short --cov=app --cov-report=term-missing --cov-report=html --cov-fail-under=100
+	@echo "🧪 Running frontend tests with pnpm..."
+	cd frontend && pnpm coverage
+	@$(MAKE) test-playwright
 
-test-backend-unit:
-	@echo "🧪 Running backend unit tests only..."
-	cd backend && uv run pytest -m "not e2e" -v --tb=short
+test-unit: test-backend test-frontend
 
 test-e2e:
 	@echo "🧪 Running end-to-end tests against real Docker images..."
-	cd backend && uv run pytest -m e2e -v --tb=short
-
-test-frontend:
-	@echo "🧪 Running frontend tests with pnpm..."
-	cd frontend && pnpm test
+	# No --cov/--cov-fail-under here: E2E tests drive the app in separate Docker
+	# containers, so pytest-cov only sees the test process (imports `app`, ~10%
+	# coverage) — a meaningless gate. To measure real E2E coverage, collect it
+	# inside the container (e.g. run coverage in the container entrypoint) and
+	# aggregate the report.
+	cd backend && uv run pytest -m e2e -v
 
 test-playwright:
 	@echo "🧪 Running Playwright e2e against Docker stack (http://localhost:3000)..."
@@ -150,47 +123,33 @@ test-playwright:
 		curl -sf http://localhost:3000/api/health >/dev/null 2>&1 || (echo "❌ App did not become healthy"; exit 1); \
 		cd frontend && pnpm exec playwright test
 
-test-backend-coverage:
-	@echo "🧪 Running backend tests with coverage (gate: 100%)..."
-	cd backend && uv run pytest -m "not e2e" --cov=app --cov-report=term-missing --cov-report=html
+test-backend:
+	@echo "🧪 Running backend unit tests only..."
+	cd backend && uv run pytest -m "not e2e" -v --cov=app --cov-report=term-missing --cov-report=html --cov-fail-under=100
 
-test-frontend-coverage:
-	@echo "🧪 Running frontend tests with coverage (gate: 100% lines/functions/branches/statements)..."
+test-frontend:
+	@echo "🧪 Running frontend tests with pnpm..."
 	cd frontend && pnpm coverage
 
 # =============================================================================
 # Linting & Formatting
 # =============================================================================
 
-lint: lint-backend lint-frontend
-
-lint-backend:
+lint:
 	@echo "🔍 Linting backend with uv..."
 	cd backend && uv run ruff check .
-
-lint-frontend:
 	@echo "🔍 Linting frontend with pnpm..."
 	cd frontend && pnpm lint
-
-format: format-backend format-frontend
-
-format-backend:
-	@echo "✨ Formatting backend with uv..."
-	cd backend && uv run black . --line-length=100
-
-format-frontend:
-	@echo "✨ Formatting frontend with pnpm..."
-	cd frontend && pnpm format
-
-type-check: type-check-backend type-check-frontend
-
-type-check-backend:
 	@echo "🔍 Type checking backend with uv..."
 	cd backend && uv run mypy .
-
-type-check-frontend:
 	@echo "🔍 Type checking frontend with pnpm..."
 	cd frontend && pnpm typecheck
+
+format:
+	@echo "✨ Formatting backend with uv..."
+	cd backend && uv run ruff format . --line-length=100
+	@echo "✨ Formatting frontend with pnpm..."
+	cd frontend && pnpm format
 
 # =============================================================================
 # Deployment
@@ -256,10 +215,6 @@ db-shell:
 	@echo "🗄️  Managed DB shell: use the OVHcloud console (Public Cloud > Databases) or:"
 	@echo "psql \"$$DATABASE_URL\""
 
-db-migrate:
-	@echo "🗄️  Running database migrations..."
-	cd backend && uv run flask db upgrade 2>/dev/null || echo "Flask-Migrate not configured"
-
 # =============================================================================
 # Maintenance
 # =============================================================================
@@ -311,10 +266,12 @@ env-check:
 # CI Helpers (used by GitHub Actions)
 # =============================================================================
 
-ci-install: install-backend install-frontend
+ci-install: install
 
-ci-test: test-backend test-frontend
+ci-test: test
 
-ci-lint: lint-backend lint-frontend
+ci-lint: lint
 
-ci-build: build-backend build-frontend
+ci-build:
+	docker build -f backend/Dockerfile -t how-to-be-human-backend .
+	docker build -f frontend/Dockerfile -t how-to-be-human-frontend .

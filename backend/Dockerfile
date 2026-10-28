@@ -1,5 +1,5 @@
 # Backend Dockerfile - Using uv for fast dependency installation
-FROM python:3.13-slim
+FROM python:3.13-slim AS base
 
 ENV PYTHONUNBUFFERED=1 \
     UV_LINK_MODE=copy \
@@ -25,6 +25,11 @@ RUN uv sync --frozen --no-dev
 
 # Copy backend code
 COPY backend/ .
+RUN rm -rf /tmp/uv-cache
+
+# Dev stage: include dev dependencies (ruff, mypy, pytest, ...) for in-container tooling
+FROM base AS dev
+RUN uv sync --frozen --all-groups
 RUN rm -rf /tmp/uv-cache
 
 # Create non-root user and grant access to venv + app

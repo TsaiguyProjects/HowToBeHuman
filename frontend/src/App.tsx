@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import './App.scss'
 import ContentLibrary from './ContentLibrary'
 
@@ -18,29 +18,30 @@ const STATUS_COLORS: Record<HealthStatus, string> = {
   unknown: '#f59e0b',
 }
 
+async function fetchHello(): Promise<string> {
+  const res = await fetch('/api/hello')
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  const data: HelloResponse = await res.json()
+  return data.message ?? 'No message received'
+}
+
 function App() {
   const [message, setMessage] = useState<string>('')
   const [loading, setLoading] = useState<boolean>(true)
+  const mountedRef = useRef(true)
 
   useEffect(() => {
+    mountedRef.current = true
     let cancelled = false
 
     async function loadMessage(): Promise<void> {
       try {
-        const res = await fetch('/api/hello')
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        const data: HelloResponse = await res.json()
-        if (!cancelled) {
-          setMessage(data.message ?? 'No message received')
-        }
+        const msg = await fetchHello()
+        if (!cancelled && mountedRef.current) setMessage(msg)
       } catch {
-        if (!cancelled) {
-          setMessage('Error connecting to backend')
-        }
+        if (!cancelled && mountedRef.current) setMessage('Error connecting to backend')
       } finally {
-        if (!cancelled) {
-          setLoading(false)
-        }
+        if (!cancelled && mountedRef.current) setLoading(false)
       }
     }
 
@@ -48,20 +49,19 @@ function App() {
 
     return () => {
       cancelled = true
+      mountedRef.current = false
     }
   }, [])
 
   const fetchMessage = async (): Promise<void> => {
     setLoading(true)
     try {
-      const res = await fetch('/api/hello')
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const data: HelloResponse = await res.json()
-      setMessage(data.message ?? 'No message received')
+      const msg = await fetchHello()
+      if (mountedRef.current) setMessage(msg)
     } catch {
-      setMessage('Error connecting to backend')
+      if (mountedRef.current) setMessage('Error connecting to backend')
     } finally {
-      setLoading(false)
+      if (mountedRef.current) setLoading(false)
     }
   }
 
@@ -95,17 +95,18 @@ function HealthCheck() {
   useEffect(() => {
     let cancelled = false
 
-    fetch('/api/health')
-      .then((res) => {
+    async function loadStatus(): Promise<void> {
+      try {
+        const res = await fetch('/api/health')
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        return res.json() as Promise<HealthResponse>
-      })
-      .then((data) => {
+        const data: HealthResponse = await res.json()
         if (!cancelled) setStatus(data.status ?? 'unknown')
-      })
-      .catch(() => {
+      } catch {
         if (!cancelled) setStatus('error')
-      })
+      }
+    }
+
+    void loadStatus()
 
     return () => {
       cancelled = true

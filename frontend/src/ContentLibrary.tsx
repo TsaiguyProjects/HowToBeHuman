@@ -1,12 +1,17 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-
-import { selectDocumentPath } from './selectDocumentPath'
 
 interface ContentIndex {
   version: string
   documents: string[]
+}
+
+function selectDocumentPath(currentPath: string | null, documents: string[]): string | null {
+  if (currentPath !== null && documents.includes(currentPath)) {
+    return currentPath
+  }
+  return documents[0] ?? null
 }
 
 function ContentLibrary() {
@@ -17,18 +22,18 @@ function ContentLibrary() {
   const [documentLoading, setDocumentLoading] = useState(false)
   const [indexError, setIndexError] = useState(false)
   const [documentError, setDocumentError] = useState(false)
-  const indexFetchInFlight = useRef(false)
 
   useEffect(() => {
     let cancelled = false
+    let controller: AbortController | null = null
 
     async function loadIndex(): Promise<void> {
-      if (indexFetchInFlight.current) {
-        return
-      }
-      indexFetchInFlight.current = true
+      controller?.abort()
+      const nextController = new AbortController()
+      controller = nextController
+
       try {
-        const response = await fetch('/api/content')
+        const response = await fetch('/api/content', { signal: nextController.signal })
         if (!response.ok) {
           throw new Error('Content index request failed')
         }
@@ -45,18 +50,17 @@ function ContentLibrary() {
           throw new Error('Content index response is invalid')
         }
         const contentPayload = payload as ContentIndex
-        if (!cancelled) {
+        if (!nextController.signal.aborted && !cancelled) {
           setContentIndex(contentPayload)
           setSelectedPath((currentPath) => selectDocumentPath(currentPath, contentPayload.documents))
           setIndexError(false)
         }
       } catch {
-        if (!cancelled) {
+        if (!nextController.signal.aborted && !cancelled) {
           setIndexError(true)
         }
       } finally {
-        indexFetchInFlight.current = false
-        if (!cancelled) {
+        if (!nextController.signal.aborted && !cancelled) {
           setIndexLoading(false)
         }
       }
@@ -67,6 +71,7 @@ function ContentLibrary() {
 
     return () => {
       cancelled = true
+      controller?.abort()
       window.clearInterval(refresh)
     }
   }, [])
