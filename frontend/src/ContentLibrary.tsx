@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
@@ -17,11 +17,16 @@ function ContentLibrary() {
   const [documentLoading, setDocumentLoading] = useState(false)
   const [indexError, setIndexError] = useState(false)
   const [documentError, setDocumentError] = useState(false)
+  const indexFetchInFlight = useRef(false)
 
   useEffect(() => {
     let cancelled = false
 
     async function loadIndex(): Promise<void> {
+      if (indexFetchInFlight.current) {
+        return
+      }
+      indexFetchInFlight.current = true
       try {
         const response = await fetch('/api/content')
         if (!response.ok) {
@@ -50,6 +55,7 @@ function ContentLibrary() {
           setIndexError(true)
         }
       } finally {
+        indexFetchInFlight.current = false
         if (!cancelled) {
           setIndexLoading(false)
         }

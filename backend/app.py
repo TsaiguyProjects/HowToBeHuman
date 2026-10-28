@@ -1,9 +1,10 @@
+import ipaddress
 import os
 import re
 from datetime import datetime
 from pathlib import Path
 
-from flask import Flask, Response, jsonify, send_from_directory
+from flask import Flask, Response, jsonify, request, send_from_directory
 from flask_cors import CORS
 from werkzeug import Response as WerkzeugResponse
 from werkzeug.exceptions import NotFound
@@ -57,7 +58,10 @@ def _content_file(directory: Path, document_path: str) -> Path | None:
 
 def create_app(static_folder: str | None = None) -> Flask:
     app = Flask(__name__, static_folder=static_folder or "../frontend/build")
-    cors_origins = os.environ.get("CORS_ORIGINS", "http://localhost:3000")
+    default_cors_origins = (
+        "http://localhost:3000" if os.environ.get("FLASK_ENV") != "production" else ""
+    )
+    cors_origins = os.environ.get("CORS_ORIGINS", default_cors_origins)
     CORS(app, origins=[o.strip() for o in cors_origins.split(",") if o.strip()])
 
     # Configuration
@@ -67,7 +71,11 @@ def create_app(static_folder: str | None = None) -> Flask:
             raise RuntimeError("SECRET_KEY must be set in production")
         secret_key = "dev-secret-change-in-production"
     app.config["SECRET_KEY"] = secret_key
-    app.config["CONTENT_ROOT"] = os.environ.get("CONTENT_ROOT", "/content")
+    app.config["CONTENT_ROOT"] = (
+        os.environ.get("CONTENT_ROOT")
+        or os.environ.get("CONTENT_DIR")
+        or "/content"
+    )
 
     # API Routes
     @app.route("/api/health")
@@ -77,6 +85,15 @@ def create_app(static_folder: str | None = None) -> Flask:
     @app.route("/api/hello")
     def hello() -> WerkzeugResponse:
         return jsonify({"message": "Hello from Flask backend!"})
+
+    @app.route("/api/caddy-ask")
+    def caddy_ask() -> WerkzeugResponse | tuple[WerkzeugResponse, int]:
+        domain = request.args.get("domain", "")
+        try:
+            ipaddress.ip_address(domain)
+        except ValueError:
+            return jsonify({"error": "Forbidden"}), 403
+        return jsonify({"status": "ok"})
 
     @app.route("/api/content")
     def list_content() -> WerkzeugResponse | tuple[WerkzeugResponse, int]:
@@ -129,7 +146,7 @@ def create_app(static_folder: str | None = None) -> Flask:
     @app.route("/", defaults={"path": ""})
     @app.route("/<path:path>")
     def serve_frontend(path: str) -> WerkzeugResponse | tuple[WerkzeugResponse, int]:
-        if path.startswith("api/"):
+        if path == "api" or path.startswith("api/"):
             return jsonify({"error": "Not found"}), 404
 
         static_folder = app.static_folder
