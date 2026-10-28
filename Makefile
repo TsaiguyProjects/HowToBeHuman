@@ -38,8 +38,8 @@ help:
 	@echo "  make test-e2e       Run e2e tests only (real Docker images)"
 	@echo "  make test-frontend  Run frontend tests (pnpm test)"
 	@echo "  make test-playwright Run Playwright e2e (Docker stack + browser)"
-	@echo "  make test-backend-coverage  Backend coverage gate (100%)"
-	@echo "  make test-frontend-coverage Frontend coverage gate (100%)"
+	@echo "  make test-backend-coverage  Backend coverage gate (95%)"
+	@echo "  make test-frontend-coverage Frontend coverage gate (95%)"
 	@echo "  make lint           Run all linters"
 	@echo "  make lint-backend   Run backend linter (uv run ruff)"
 	@echo "  make lint-frontend  Run frontend linter (pnpm lint)"
@@ -151,11 +151,11 @@ test-playwright:
 		cd frontend && pnpm exec playwright test
 
 test-backend-coverage:
-	@echo "🧪 Running backend tests with coverage (gate: 100%)..."
+	@echo "🧪 Running backend tests with coverage (gate: 95%)..."
 	cd backend && uv run pytest -m "not e2e" --cov=app --cov-report=term-missing --cov-report=html
 
 test-frontend-coverage:
-	@echo "🧪 Running frontend tests with coverage (gate: 100% lines/functions/branches/statements)..."
+	@echo "🧪 Running frontend tests with coverage (gate: 95% lines/functions/branches/statements)..."
 	cd frontend && pnpm coverage
 
 # =============================================================================

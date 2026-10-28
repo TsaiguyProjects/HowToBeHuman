@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import './App.scss'
 import ContentLibrary from './ContentLibrary'
 
@@ -28,18 +28,20 @@ async function fetchHello(): Promise<string> {
 function App() {
   const [message, setMessage] = useState<string>('')
   const [loading, setLoading] = useState<boolean>(true)
+  const mountedRef = useRef(true)
 
   useEffect(() => {
+    mountedRef.current = true
     let cancelled = false
 
     async function loadMessage(): Promise<void> {
       try {
         const msg = await fetchHello()
-        if (!cancelled) setMessage(msg)
+        if (!cancelled && mountedRef.current) setMessage(msg)
       } catch {
-        if (!cancelled) setMessage('Error connecting to backend')
+        if (!cancelled && mountedRef.current) setMessage('Error connecting to backend')
       } finally {
-        if (!cancelled) setLoading(false)
+        if (!cancelled && mountedRef.current) setLoading(false)
       }
     }
 
@@ -47,18 +49,20 @@ function App() {
 
     return () => {
       cancelled = true
+      mountedRef.current = false
     }
   }, [])
 
   const fetchMessage = async (): Promise<void> => {
+    if (!mountedRef.current) return
     setLoading(true)
     try {
       const msg = await fetchHello()
-      setMessage(msg)
+      if (mountedRef.current) setMessage(msg)
     } catch {
-      setMessage('Error connecting to backend')
+      if (mountedRef.current) setMessage('Error connecting to backend')
     } finally {
-      setLoading(false)
+      if (mountedRef.current) setLoading(false)
     }
   }
 

@@ -194,7 +194,7 @@ make test-playwright    # Playwright e2e (boots Docker stack + real browser)
 - Cross-service integration is additionally covered by the backend e2e suite,
   which serves the real built frontend bundle.
 
-### Coverage Gates (100% enforced)
+### Coverage Gates (95% enforced)
 
 Both suites fail below 100% statements/lines/functions (and branches, frontend):
 

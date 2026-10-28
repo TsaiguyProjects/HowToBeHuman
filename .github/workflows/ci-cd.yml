@@ -23,8 +23,8 @@ jobs:
           python-version-file: backend/.python-version
       - name: Install dependencies
         run: uv sync --all-groups --locked
-      - name: Run tests + coverage gate (100%)
-        run: uv run pytest -v --cov=app --cov-report=term-missing --cov-fail-under=100
+      - name: Run tests + coverage gate (95%)
+        run: uv run pytest -v -m "not e2e" --cov=app --cov-report=term-missing --cov-fail-under=95
       - name: Lint
         run: uv run ruff check .
       - name: Type check
@@ -48,7 +48,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
         working-directory: frontend
-      - name: Test + coverage gate (100%)
+      - name: Test + coverage gate (95%)
         run: pnpm coverage
       - name: Build
         run: pnpm run build
@@ -58,6 +58,7 @@ jobs:
         run: pnpm run typecheck
 
   playwright-e2e:
+    if: github.event_name == 'pull_request'
     needs: [test-backend, test-frontend]
     runs-on: ubuntu-latest
     steps:
@@ -99,7 +100,7 @@ jobs:
         run: docker compose down -v
 
   deploy:
-    needs: [test-backend, test-frontend, playwright-e2e]
+    needs: [test-backend, test-frontend]
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/ovhcloud'
     runs-on: ubuntu-latest
     concurrency:

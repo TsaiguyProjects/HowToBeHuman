@@ -1,5 +1,6 @@
 import ipaddress
 import os
+import re
 from datetime import datetime
 from pathlib import Path
 
@@ -7,10 +8,13 @@ from flask import Flask, Response, jsonify, request, send_from_directory
 from flask_cors import CORS
 from werkzeug.exceptions import NotFound
 
+CONTENT_VERSION_PATTERN = re.compile(r"^\d{8}T\d{6}Z$")
 CONTENT_SUFFIXES = frozenset({".md", ".mmd", ".markdown"})
 
 
 def _is_content_version(name: str) -> bool:
+    if CONTENT_VERSION_PATTERN.fullmatch(name) is None:
+        return False
     try:
         datetime.strptime(name, "%Y%m%dT%H%M%SZ")
     except ValueError:
