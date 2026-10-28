@@ -82,3 +82,4 @@ wiki/
 
 # Local content staging (not deployed from repo; upload manually to VPS)
 content/
+content-source/

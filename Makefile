@@ -2,7 +2,7 @@
 # Simplifies common development and deployment tasks
 # Uses: uv (Python), pnpm (JavaScript)
 
-.PHONY: help install dev build test lint format type-check clean deploy logs status open-frontend install-hooks uninstall-hooks
+.PHONY: help install dev build test lint format type-check clean deploy logs status open-frontend install-hooks uninstall-hooks publish publish-content
 
 # Cross-platform browser open + frontend URL
 UNAME_S := $(shell uname -s)
@@ -40,6 +40,8 @@ help:
 	@echo ""
 	@echo "Deployment:"
 	@echo "  make deploy         Build and deploy containers to the OVHcloud VPS over SSH"
+	@echo "  make publish-content Publish content-source/ as a new timestamped VPS version"
+	@echo "  make publish        Alias for publish-content"
 	@echo "  make logs           Follow production Compose logs on the VPS"
 	@echo "  make status         Check production Compose status on the VPS"
 	@echo ""
@@ -158,6 +160,12 @@ format:
 deploy:
 	@echo "🚀 Deploying to OVHcloud VPS (Docker Compose)..."
 	@bash ./scripts/deploy.sh
+
+publish-content:
+	@echo "📤 Publishing content to OVHcloud VPS..."
+	@VERSION="$(VERSION)" CONTENT_SOURCE="$(CONTENT_SOURCE)" bash ./scripts/publish-content.sh
+
+publish: publish-content
 
 logs:
 	@echo "📝 Following production logs on the VPS..."
