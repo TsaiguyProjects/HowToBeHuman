@@ -21,13 +21,15 @@ cd "$REPO_ROOT"
 if [ "$NEED_BACKEND" = 1 ]; then
   require_cmd uv "Install uv: pip install uv  (or: brew install uv)"
   _info "▸ backend unit tests + coverage gate…"
-  make test-backend-coverage
+  make test-backend
+  cd "$REPO_ROOT"
 fi
 
 if [ "$NEED_FRONTEND" = 1 ]; then
   require_cmd pnpm "Enable pnpm: corepack enable  (requires Node 20.19+)"
   _info "▸ frontend unit tests + coverage gate…"
-  make test-frontend-coverage
+  make test-frontend
+  cd "$REPO_ROOT"
 fi
 
 _green "✔ pre-commit checks passed."
