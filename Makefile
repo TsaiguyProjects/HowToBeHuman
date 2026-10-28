@@ -137,14 +137,16 @@ test-frontend:
 # Linting & Formatting
 # =============================================================================
 
-lint:
-	@echo "🔍 Linting backend with uv..."
+lint: lint-backend lint-frontend
+
+lint-backend:
+	@echo "🔍 Linting + type checking backend with uv and mypy..."
 	cd backend && uv run ruff check .
-	@echo "🔍 Linting frontend with pnpm..."
-	cd frontend && pnpm lint
-	@echo "🔍 Type checking backend with uv..."
 	cd backend && uv run mypy .
-	@echo "🔍 Type checking frontend with pnpm..."
+
+lint-frontend:
+	@echo "🔍 Linting + type checking frontend with pnpm..."
+	cd frontend && pnpm lint
 	cd frontend && pnpm typecheck
 
 format:
