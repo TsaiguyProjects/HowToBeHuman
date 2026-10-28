@@ -54,7 +54,6 @@ function App() {
   }, [])
 
   const fetchMessage = async (): Promise<void> => {
-    if (!mountedRef.current) return
     setLoading(true)
     try {
       const msg = await fetchHello()

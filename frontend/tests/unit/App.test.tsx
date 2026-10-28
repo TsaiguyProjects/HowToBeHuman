@@ -159,6 +159,70 @@ describe('App', () => {
     await waitFor(() => expect(true).toBe(true))
   })
 
+  it('ignores a late refresh response after unmount', async () => {
+    let helloCalls = 0
+    let resolveRefresh: ((value: Response) => void) | undefined
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: string | URL | Request) => {
+        const url = String(input)
+        if (url.endsWith('/api/content')) {
+          return Promise.resolve({ ok: true, status: 200, json: async () => CONTENT_PAYLOAD } as Response)
+        }
+        if (url.endsWith('/api/health')) {
+          return Promise.resolve({ ok: true, status: 200, json: async () => HEALTH_PAYLOAD } as Response)
+        }
+        helloCalls += 1
+        if (helloCalls === 1) {
+          return Promise.resolve({ ok: true, status: 200, json: async () => HELLO_PAYLOAD } as Response)
+        }
+        return new Promise<Response>((resolve) => {
+          resolveRefresh = resolve
+        })
+      }),
+    )
+    const { unmount } = render(<App />)
+    await screen.findByText('Hello from Flask backend!')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }))
+    unmount()
+    await waitFor(() => expect(resolveRefresh).toBeDefined())
+    resolveRefresh?.({ ok: true, status: 200, json: async () => HELLO_PAYLOAD } as Response)
+    await waitFor(() => expect(true).toBe(true))
+  })
+
+  it('ignores a late refresh error after unmount', async () => {
+    let helloCalls = 0
+    let rejectRefresh: ((error: Error) => void) | undefined
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: string | URL | Request) => {
+        const url = String(input)
+        if (url.endsWith('/api/content')) {
+          return Promise.resolve({ ok: true, status: 200, json: async () => CONTENT_PAYLOAD } as Response)
+        }
+        if (url.endsWith('/api/health')) {
+          return Promise.resolve({ ok: true, status: 200, json: async () => HEALTH_PAYLOAD } as Response)
+        }
+        helloCalls += 1
+        if (helloCalls === 1) {
+          return Promise.resolve({ ok: true, status: 200, json: async () => HELLO_PAYLOAD } as Response)
+        }
+        return new Promise<Response>((_resolve, reject) => {
+          rejectRefresh = reject
+        })
+      }),
+    )
+    const { unmount } = render(<App />)
+    await screen.findByText('Hello from Flask backend!')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }))
+    unmount()
+    await waitFor(() => expect(rejectRefresh).toBeDefined())
+    rejectRefresh?.(new Error('connection reset'))
+    await waitFor(() => expect(true).toBe(true))
+  })
+
   it('shows an error when the initial greeting response is not ok', async () => {
     // Return a non-ok Response-like object for hello
     vi.stubGlobal(
