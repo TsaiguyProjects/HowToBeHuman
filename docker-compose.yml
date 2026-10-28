@@ -30,6 +30,7 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
+      target: dev
     working_dir: /app
     ports:
       - "8080:8080"
@@ -38,7 +39,7 @@ services:
     environment:
       - FLASK_ENV=development
       - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-me}
-    command: uv run python app.py
+    command: uv run --no-sync python app.py
     profiles:
       - dev
 
