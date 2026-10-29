@@ -360,6 +360,20 @@ the VPS. It refuses to deploy if the external content directory is missing and
 does not create, upload, or delete content. Invoke via `make deploy` (which
 runs it with Bash) or `bash scripts/deploy.sh`.
 
+### Publishing content
+
+Published content is uploaded separately from application deploys. `make
+publish-content` (alias `make publish`) uploads `content-source/` to a hidden
+staging directory on the VPS, atomically renames it to a new UTC timestamp
+version, and compresses older version directories to `.tar.gz` to save space.
+The running app picks up the new version without a rebuild or restart:
+
+```bash
+make publish-content
+# Optional overrides:
+make publish-content VERSION=20261028T120000Z CONTENT_SOURCE=./content
+```
+
 ### GitHub Actions deploy
 
 Set repository Actions secrets and variables:
@@ -380,7 +394,11 @@ The `.env` and versioned content directories on the VPS are untouched by deploys
 The backend discovers the highest valid timestamp directory when each content
 request is made, so uploading a newer directory publishes it without rebuilding
 or restarting the app. To roll content back, remove or move the newest directory
-out of `CONTENT_DIR`; do not edit version directory names in place.
+out of `CONTENT_DIR`; older versions are stored as `.tar.gz` archives and must
+be extracted before they can be served again. Each past version is compressed
+into its own archive (e.g. `20260101T000000Z.tar.gz`), not bundled together,
+so a single version can be restored independently. Do not edit version directory
+or archive names in place.
 
 ### Domain and TLS
 
