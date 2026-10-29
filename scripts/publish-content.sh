@@ -19,7 +19,7 @@ if [[ "$CONTENT_SOURCE" == "content-source" && ! -d "$CONTENT_SOURCE" && -d "$RO
   CONTENT_SOURCE="$ROOT_DIR/content-source"
 fi
 
-for cmd in rsync ssh python3; do
+for cmd in rsync ssh python3 mktemp; do
   if ! command -v "$cmd" >/dev/null 2>&1; then
     echo "Error: $cmd is required." >&2
     exit 1
@@ -66,52 +66,95 @@ STAGING=".staging-$VERSION"
 SSH=(ssh -i "$SSH_KEY" -o IdentitiesOnly=yes)
 REMOTE="$VPS_USER@$VPS_HOST"
 
+# Wrap ssh in a small executable so rsync does not have to parse a key path
+# that may contain spaces or shell metacharacters (fixes SSH key quoting).
+SSH_WRAPPER="$(mktemp "${TMPDIR:-/tmp}/publish-content-ssh.XXXXXX")"
+cat > "$SSH_WRAPPER" <<EOF
+#!/usr/bin/env bash
+exec ssh -i $(printf '%q' "$SSH_KEY") -o IdentitiesOnly=yes "\$@"
+EOF
+chmod +x "$SSH_WRAPPER"
+
 cleanup() {
+  rm -f "$SSH_WRAPPER"
   "${SSH[@]}" "$REMOTE" "rm -rf '$CONTENT_DIR/$STAGING'" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
 
 printf 'Checking VPS content directory: %s\n' "$CONTENT_DIR"
-"${SSH[@]}" "$REMOTE" "test -d '$CONTENT_DIR' && test -w '$CONTENT_DIR'" || {
+if ! "${SSH[@]}" "$REMOTE" "bash -s" <<REMOTE
+set -eu
+test -d '$CONTENT_DIR' && test -w '$CONTENT_DIR'
+REMOTE
+then
   echo "Error: content directory must already exist and be writable on the VPS." >&2
   exit 1
-}
+fi
 
 printf 'Checking that version %s is not already published...\n' "$VERSION"
-"${SSH[@]}" "$REMOTE" "if [[ -e '$CONTENT_DIR/$VERSION' ]]; then echo 'Error: version already exists: $VERSION' >&2; exit 1; fi"
+if ! "${SSH[@]}" "$REMOTE" "bash -s" <<REMOTE
+set -eu
+if [[ -e '$CONTENT_DIR/$VERSION' ]]; then
+  echo 'Error: version already exists: $VERSION' >&2
+  exit 1
+fi
+REMOTE
+then
+  exit 1
+fi
 
 printf 'Uploading %s to staging directory %s...\n' "$CONTENT_SOURCE" "$STAGING"
 rsync -a --delete --exclude='.git' --exclude='.DS_Store' \
-  -e "ssh -i '$SSH_KEY' -o IdentitiesOnly=yes" \
+  -e "$SSH_WRAPPER" \
   "$CONTENT_SOURCE/" "$REMOTE:$CONTENT_DIR/$STAGING/"
 
 printf 'Atomically publishing %s...\n' "$VERSION"
-"${SSH[@]}" "$REMOTE" \
-  "if [[ -e '$CONTENT_DIR/$VERSION' ]]; then echo 'Error: version already exists: $VERSION' >&2; exit 1; fi; mv '$CONTENT_DIR/$STAGING' '$CONTENT_DIR/$VERSION'"
+if ! "${SSH[@]}" "$REMOTE" "bash -s" <<REMOTE
+set -eu
+if [[ -e '$CONTENT_DIR/$VERSION' ]]; then
+  echo 'Error: version already exists: $VERSION' >&2
+  exit 1
+fi
+mv '$CONTENT_DIR/$STAGING' '$CONTENT_DIR/$VERSION'
+REMOTE
+then
+  exit 1
+fi
 
 printf 'Compressing older content versions to save space...\n'
-if ! "${SSH[@]}" "$REMOTE" "
+if ! "${SSH[@]}" "$REMOTE" "bash -s" <<REMOTE
 set -eu
 cd '$CONTENT_DIR'
-versions=\"\$(find . -mindepth 1 -maxdepth 1 -type d -regextype posix-extended -regex './[0-9]{8}T[0-9]{6}Z' -printf '%f\\n' | sort)\"
-if [[ -z \"\$versions\" ]]; then
+versions="\$(find . -maxdepth 1 -mindepth 1 -type d -name '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]T[0-9][0-9][0-9][0-9][0-9][0-9]Z' -print | sed 's|^\./||' | sort)"
+if [[ -z "\$versions" ]]; then
   echo 'No version directories found.'
   exit 0
 fi
-latest=\"\$(printf '%s\\n' \"\$versions\" | tail -n 1)\"
+latest="\$(printf '%s\n' "\$versions" | tail -n 1)"
 while IFS= read -r dir; do
-  [[ -z \"\$dir\" || \"\$dir\" == \"\$latest\" ]] && continue
-  archive=\"\$dir.tar.gz\"
-  if [[ -e \"\$archive\" ]]; then
-    echo \"Skipping \$dir (already compressed)\"
+  [[ -z "\$dir" || "\$dir" == "\$latest" ]] && continue
+  archive="\$dir.tar.gz"
+  if [[ -e "\$archive" ]]; then
+    if [[ -d "\$dir" ]]; then
+      if tar -tzf "\$archive" >/dev/null 2>&1; then
+        echo "Archive exists; removing uncompressed \$dir..."
+        rm -rf "\$dir"
+      else
+        echo "Existing archive invalid; recompressing \$dir..."
+        tar -czf "\$archive" "\$dir" && rm -rf "\$dir"
+      fi
+    else
+      echo "Skipping \$dir (already compressed)"
+    fi
     continue
   fi
-  echo \"Compressing \$dir...\"
-  tar -czf \"\$archive\" \"\$dir\"
-  rm -rf \"\$dir\"
-done <<< \"\$versions\"
+  echo "Compressing \$dir..."
+  tar -czf "\$archive" "\$dir"
+  rm -rf "\$dir"
+done <<< "\$versions"
 echo 'Older content versions compressed.'
-"; then
+REMOTE
+then
   echo "Warning: failed to compress older content versions." >&2
 fi
 

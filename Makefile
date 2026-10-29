@@ -2,7 +2,7 @@
 # Simplifies common development and deployment tasks
 # Uses: uv (Python), pnpm (JavaScript)
 
-.PHONY: help install dev build test lint format type-check clean deploy logs status open-frontend install-hooks uninstall-hooks publish publish-content
+.PHONY: help install dev build test test-unit test-backend test-frontend test-e2e test-playwright lint lint-backend lint-frontend format type-check clean deploy logs status open-frontend install-hooks uninstall-hooks publish publish-content
 
 # Cross-platform browser open + frontend URL
 UNAME_S := $(shell uname -s)
