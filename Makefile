@@ -70,7 +70,7 @@ lock:
 	@echo "🔒 Regenerating lockfiles..."
 	cd backend && uv lock
 	cd frontend && pnpm install --lockfile-only
-	@echo "✅ Commit backend/uv.lock and frontend/pnpm-lock.yaml"
+	@echo "✅ Commit backend/uv.lock and (root) pnpm-lock.yaml"
 
 dev:
 	@echo "🚀 Starting development environment (production-like)..."
