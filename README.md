@@ -50,10 +50,10 @@ A full-stack application with a Python Flask backend and React frontend, deploya
 │   ├── playwright.config.ts  # Playwright config (baseURL via E2E_BASE_URL)
 │   ├── vite.config.ts        # Vite configuration (typed)
 │   ├── nginx.conf            # Nginx reverse proxy config
+│   ├── pnpm-workspace.yaml   # pnpm workspace (single package; allowBuilds + overrides)
+│   ├── pnpm-lock.yaml        # Locked JS deps (generate with `pnpm install`, commit it)
+│   ├── .npmrc                # pnpm settings (frozen lockfile, corepack)
 │   └── Dockerfile            # Frontend container (pnpm multi-stage build)
-├── pnpm-workspace.yaml       # pnpm workspace root
-├── pnpm-lock.yaml            # Locked JS deps (generate with `pnpm install`, commit it)
-├── .npmrc                    # pnpm settings (frozen lockfile, corepack)
 ├── scripts/
 │   ├── dev.sh                # Development startup script
 │   └── deploy.sh             # Deployment script
@@ -108,12 +108,12 @@ uv run python app.py   # runs inside .venv (replaces source venv/bin/activate)
 **Frontend:**
 ```bash
 cd frontend
-pnpm install           # replaces npm install (updates root pnpm-lock.yaml)
+pnpm install           # replaces npm install (updates frontend/pnpm-lock.yaml)
 cp ../.env.example .env.local  # Vite uses .env.local
 pnpm run dev           # replaces npm run dev
 ```
 
-> **First run?** `cd backend && uv lock` generates `uv.lock`. `pnpm install` generates the root `pnpm-lock.yaml`. Commit both lockfiles — they guarantee reproducible builds in Docker, CI, and OVHcloud.
+> **First run?** `cd backend && uv lock` generates `uv.lock`. `cd frontend && pnpm install` generates `frontend/pnpm-lock.yaml`. Commit both lockfiles — they guarantee reproducible builds in Docker, CI, and OVHcloud.
 
 ## Makefile Commands
 
@@ -223,8 +223,9 @@ your changes — backend-only commits skip frontend tests and vice versa.
 | `pre-commit` | unit tests + coverage gate | docs-only commit |
 | `pre-push` | coverage gate + **all** tests incl. e2e (testcontainers + Playwright) | docs-only push |
 
-Scope rules: `backend/**` → backend suites; `frontend/**` (+ root
-`pnpm-lock.yaml`, `pnpm-workspace.yaml`, `.npmrc`) → frontend suites; infra
+Scope rules: `backend/**` → backend suites; `frontend/**` (including
+`frontend/pnpm-lock.yaml`, `frontend/pnpm-workspace.yaml`,
+`frontend/.npmrc`) → frontend suites; infra
 (`Makefile`, `docker-compose.yml`, `ovh/`, `scripts/`, `.github/`,
 `.dockerignore`) → everything. (Edits under `.githooks/` no longer trigger
 suites.)
