@@ -96,7 +96,9 @@ jobs:
         run: docker compose down -v
 
   deploy:
-    needs: [test-backend, test-frontend, playwright-e2e]
+    # playwright-e2e only runs on pull_request; depending on it here would skip
+    # deploys on push. Gate PRs with e2e separately (see playwright-e2e job).
+    needs: [test-backend, test-frontend]
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/ovhcloud'
     runs-on: ubuntu-latest
     concurrency:

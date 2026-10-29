@@ -395,8 +395,10 @@ The backend discovers the highest valid timestamp directory when each content
 request is made, so uploading a newer directory publishes it without rebuilding
 or restarting the app. To roll content back, remove or move the newest directory
 out of `CONTENT_DIR`; older versions are stored as `.tar.gz` archives and must
-be extracted before they can be served again. Do not edit version directory or
-archive names in place.
+be extracted before they can be served again. Each past version is compressed
+into its own archive (e.g. `20260101T000000Z.tar.gz`), not bundled together,
+so a single version can be restored independently. Do not edit version directory
+or archive names in place.
 
 ### Domain and TLS
 

@@ -68,6 +68,13 @@ REMOTE="$VPS_USER@$VPS_HOST"
 
 # Wrap ssh in a small executable so rsync does not have to parse a key path
 # that may contain spaces or shell metacharacters (fixes SSH key quoting).
+SSH_WRAPPER=""
+cleanup() {
+  [[ -n "${SSH_WRAPPER:-}" ]] && rm -f "$SSH_WRAPPER"
+  "${SSH[@]}" "$REMOTE" "rm -rf '$CONTENT_DIR/$STAGING'" >/dev/null 2>&1 || true
+}
+trap cleanup EXIT
+
 SSH_WRAPPER="$(mktemp "${TMPDIR:-/tmp}/publish-content-ssh.XXXXXX")"
 cat > "$SSH_WRAPPER" <<EOF
 #!/usr/bin/env bash
@@ -75,15 +82,9 @@ exec ssh -i $(printf '%q' "$SSH_KEY") -o IdentitiesOnly=yes "\$@"
 EOF
 chmod +x "$SSH_WRAPPER"
 
-cleanup() {
-  rm -f "$SSH_WRAPPER"
-  "${SSH[@]}" "$REMOTE" "rm -rf '$CONTENT_DIR/$STAGING'" >/dev/null 2>&1 || true
-}
-trap cleanup EXIT
-
 printf 'Checking VPS content directory: %s\n' "$CONTENT_DIR"
 if ! "${SSH[@]}" "$REMOTE" "bash -s" <<REMOTE
-set -eu
+set -euo pipefail
 test -d '$CONTENT_DIR' && test -w '$CONTENT_DIR'
 REMOTE
 then
@@ -93,7 +94,7 @@ fi
 
 printf 'Checking that version %s is not already published...\n' "$VERSION"
 if ! "${SSH[@]}" "$REMOTE" "bash -s" <<REMOTE
-set -eu
+set -euo pipefail
 if [[ -e '$CONTENT_DIR/$VERSION' ]]; then
   echo 'Error: version already exists: $VERSION' >&2
   exit 1
@@ -110,7 +111,7 @@ rsync -a --delete --exclude='.git' --exclude='.DS_Store' \
 
 printf 'Atomically publishing %s...\n' "$VERSION"
 if ! "${SSH[@]}" "$REMOTE" "bash -s" <<REMOTE
-set -eu
+set -euo pipefail
 if [[ -e '$CONTENT_DIR/$VERSION' ]]; then
   echo 'Error: version already exists: $VERSION' >&2
   exit 1
@@ -123,7 +124,7 @@ fi
 
 printf 'Compressing older content versions to save space...\n'
 if ! "${SSH[@]}" "$REMOTE" "bash -s" <<REMOTE
-set -eu
+set -euo pipefail
 cd '$CONTENT_DIR'
 versions="\$(find . -maxdepth 1 -mindepth 1 -type d -name '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]T[0-9][0-9][0-9][0-9][0-9][0-9]Z' -print | sed 's|^\./||' | sort)"
 if [[ -z "\$versions" ]]; then
