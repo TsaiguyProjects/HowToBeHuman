@@ -42,7 +42,7 @@ jobs:
         with:
           node-version: '24'
           cache: 'pnpm'
-          cache-dependency-path: pnpm-lock.yaml
+          cache-dependency-path: frontend/pnpm-lock.yaml
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
         working-directory: frontend
@@ -66,9 +66,10 @@ jobs:
         with:
           node-version: '24'
           cache: 'pnpm'
-          cache-dependency-path: pnpm-lock.yaml
+          cache-dependency-path: frontend/pnpm-lock.yaml
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+        working-directory: frontend
       - name: Install Playwright browser
         run: pnpm exec playwright install --with-deps chromium
         working-directory: frontend

@@ -34,7 +34,7 @@ map_scopes() {
     [ -z "$file" ] && continue
     case "$file" in
       backend/*) NEED_BACKEND=1 ;;
-      frontend/*|pnpm-lock.yaml|pnpm-workspace.yaml|.npmrc) NEED_FRONTEND=1 ;;
+      frontend/*) NEED_FRONTEND=1 ;;
       Makefile|docker-compose.yml|.dockerignore|ovh/*|scripts/*|.github/*)
         NEED_BACKEND=1
         NEED_FRONTEND=1

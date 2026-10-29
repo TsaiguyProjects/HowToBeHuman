@@ -2,22 +2,21 @@
 # Stage 1: Build the React app
 FROM node:24-alpine AS builder
 
-WORKDIR /app
+WORKDIR /app/frontend
 
 # Enable pnpm via corepack (matches packageManager field in package.json)
 RUN corepack enable
 
-# Copy workspace files first for better caching
-# (pnpm lockfile lives at the repo root via pnpm-workspace.yaml)
-COPY pnpm-workspace.yaml pnpm-lock.yaml ./
-COPY frontend/package.json ./frontend/package.json
+# Copy workspace/lockfile/config first for better caching
+COPY frontend/pnpm-workspace.yaml frontend/pnpm-lock.yaml frontend/.npmrc ./
+COPY frontend/package.json ./
 
 # Install dependencies with pnpm (fast, disk-efficient)
 RUN pnpm install --frozen-lockfile
 
 # Copy source and build
-COPY frontend/ ./frontend/
-RUN pnpm --filter frontend run build
+COPY frontend/ ./
+RUN pnpm run build
 
 # Stage 2: Serve with nginx
 FROM nginx:alpine

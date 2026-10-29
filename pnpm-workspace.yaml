@@ -1,6 +1,0 @@
-packages:
-  - 'frontend'
-overrides:
-  zod: ">=4.6.6"
-allowBuilds:
-  '@parcel/watcher': true
