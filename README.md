@@ -223,8 +223,9 @@ your changes — backend-only commits skip frontend tests and vice versa.
 | `pre-commit` | unit tests + coverage gate | docs-only commit |
 | `pre-push` | coverage gate + **all** tests incl. e2e (testcontainers + Playwright) | docs-only push |
 
-Scope rules: `backend/**` → backend suites; `frontend/**` (+ root
-`pnpm-lock.yaml`, `pnpm-workspace.yaml`, `.npmrc`) → frontend suites; infra
+Scope rules: `backend/**` → backend suites; `frontend/**` (including
+`frontend/pnpm-lock.yaml`, `frontend/pnpm-workspace.yaml`,
+`frontend/.npmrc`) → frontend suites; infra
 (`Makefile`, `docker-compose.yml`, `ovh/`, `scripts/`, `.github/`,
 `.dockerignore`) → everything. (Edits under `.githooks/` no longer trigger
 suites.)

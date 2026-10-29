@@ -2,7 +2,7 @@
 # Simplifies common development and deployment tasks
 # Uses: uv (Python), pnpm (JavaScript)
 
-.PHONY: help install dev build test test-unit test-backend test-frontend test-e2e test-playwright lint lint-backend lint-frontend format type-check clean deploy logs status open-frontend install-hooks uninstall-hooks publish publish-content
+.PHONY: help install dev build test test-unit test-backend test-frontend test-e2e test-playwright lint lint-backend lint-frontend audit audit-backend audit-frontend format type-check clean deploy logs status open-frontend install-hooks uninstall-hooks publish publish-content
 
 # Cross-platform browser open + frontend URL
 UNAME_S := $(shell uname -s)
@@ -36,6 +36,7 @@ help:
 	@echo "  make test-e2e       Run e2e tests only (real Docker images) with coverage"
 	@echo "  make test-playwright Run Playwright e2e (Docker stack + browser)"
 	@echo "  make lint           Run all linters and type checkers (mypy + tsc)"
+	@echo "  make audit          Audit dependencies for known vulnerabilities (uv + pnpm)"
 	@echo "  make format         Format code (uv run black + pnpm format)"
 	@echo ""
 	@echo "Deployment:"
@@ -148,6 +149,16 @@ lint-frontend:
 	@echo "🔍 Linting + type checking frontend with pnpm..."
 	cd frontend && pnpm lint
 	cd frontend && pnpm typecheck
+
+audit: audit-backend audit-frontend
+
+audit-backend:
+	@echo "🔒 Auditing backend dependencies with uv..."
+	cd backend && uv audit --preview-features audit-command
+
+audit-frontend:
+	@echo "🔒 Auditing frontend dependencies with pnpm..."
+	cd frontend && pnpm audit
 
 format:
 	@echo "✨ Formatting backend with uv..."

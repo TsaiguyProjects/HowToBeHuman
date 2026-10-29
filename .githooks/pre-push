@@ -64,12 +64,16 @@ if [ "$NEED_BACKEND" = 1 ]; then
   make test-backend
   _info "▸ backend e2e (testcontainers, real images)…"
   make test-e2e
+  _info "▸ backend dependency audit…"
+  make audit-backend
 fi
 
 if [ "$NEED_FRONTEND" = 1 ]; then
   require_cmd pnpm "Enable pnpm: corepack enable  (requires Node 20.19+)"
   _info "▸ frontend unit tests + coverage gate…"
   make test-frontend
+  _info "▸ frontend dependency audit…"
+  make audit-frontend
 fi
 
 _green "✔ pre-push checks passed."
