@@ -125,6 +125,11 @@ variable "cloudflare_zone_id" {
   type        = string
   default     = null
   nullable    = true
+
+  validation {
+    condition     = var.cloudflare_zone_id == null || can(regex("^[0-9a-fA-F]{32}$", var.cloudflare_zone_id))
+    error_message = "cloudflare_zone_id must be a 32-character hexadecimal Cloudflare zone ID."
+  }
 }
 
 variable "cloudflare_hostname" {
@@ -139,6 +144,11 @@ variable "cloudflare_origin_ipv4" {
   type        = string
   default     = null
   nullable    = true
+
+  validation {
+    condition     = var.cloudflare_origin_ipv4 == null || can(regex("^(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$", var.cloudflare_origin_ipv4))
+    error_message = "cloudflare_origin_ipv4 must be a valid IPv4 address."
+  }
 }
 
 variable "cloudflare_content_path_prefix" {

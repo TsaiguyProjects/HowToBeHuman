@@ -34,6 +34,13 @@ resource "cloudflare_ruleset" "content_managed_challenge" {
   kind        = "zone"
   phase       = "http_request_firewall_custom"
 
+  lifecycle {
+    precondition {
+      condition     = var.cloudflare_zone_id != null
+      error_message = "Set cloudflare_zone_id when enable_cloudflare_edge and cloudflare_content_path_prefix are configured."
+    }
+  }
+
   rules = [{
     ref         = "challenge_content_endpoint"
     description = "Challenge requests for the configured content route prefix."
