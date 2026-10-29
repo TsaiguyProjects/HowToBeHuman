@@ -113,3 +113,52 @@ variable "registry_user_login" {
   type        = string
   default     = "how-to-be-human-ci"
 }
+
+variable "enable_cloudflare_edge" {
+  description = "Manage a proxied Cloudflare DNS record and optional content-route challenge. Requires an existing Cloudflare zone."
+  type        = bool
+  default     = false
+}
+
+variable "cloudflare_zone_id" {
+  description = "Cloudflare zone ID for the website domain."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition     = var.cloudflare_zone_id == null || can(regex("^[0-9a-fA-F]{32}$", var.cloudflare_zone_id))
+    error_message = "cloudflare_zone_id must be a 32-character hexadecimal Cloudflare zone ID."
+  }
+}
+
+variable "cloudflare_hostname" {
+  description = "Website hostname to proxy through Cloudflare, e.g. www.example.com or example.com."
+  type        = string
+  default     = null
+  nullable    = true
+}
+
+variable "cloudflare_origin_ipv4" {
+  description = "Public IPv4 address of the OVHcloud Ingress LoadBalancer or VM origin."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition     = var.cloudflare_origin_ipv4 == null || can(regex("^(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$", var.cloudflare_origin_ipv4))
+    error_message = "cloudflare_origin_ipv4 must be a valid IPv4 address."
+  }
+}
+
+variable "cloudflare_content_path_prefix" {
+  description = "Optional URL path prefix for a Managed Challenge rule (e.g. /api/content). Leave null to create DNS/CDN only."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition     = var.cloudflare_content_path_prefix == null || can(regex("^/[A-Za-z0-9/_-]*$", var.cloudflare_content_path_prefix))
+    error_message = "cloudflare_content_path_prefix must start with / and contain only letters, digits, /, _ or -."
+  }
+}

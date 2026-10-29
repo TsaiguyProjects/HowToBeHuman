@@ -415,6 +415,35 @@ The checked-in `ovh/k8s/` manifests and `ovh/terraform/` definitions describe
 the previous MKS + Managed Private Registry option. The VPS deploy workflow
 does not apply those resources; don’t run `make infra-apply` for this setup.
 
+### Crawler policy and optional Cloudflare Free edge
+
+The frontend publishes `robots.txt` asking selected AI crawlers not to fetch
+the site. This is voluntary crawler guidance, not access control. Any content
+served to anonymous visitors can still be copied by clients that ignore it.
+
+Cloudflare Free can be used as a proxied DNS/CDN/WAF layer. It is optional and
+not created unless `enable_cloudflare_edge = true`. The Cloudflare zone must
+already exist, use Cloudflare nameservers, and the Cloudflare API token must be
+available as `CLOUDFLARE_API_TOKEN` with DNS Edit and Zone WAF Edit access.
+Set `cloudflare_zone_id`, `cloudflare_hostname`, and `cloudflare_origin_ipv4`
+in `terraform.tfvars`; the origin IPv4 is the OVH LoadBalancer/VM public IP.
+Then run `make infra-plan` and review the changes before applying.
+
+By default this only provisions a proxied A record. To add a Managed Challenge
+on a dedicated content endpoint, set `cloudflare_content_path_prefix` (for
+example, `/api/content`). Leave it unset until that route exists: challenging
+the general frontend or health endpoint can break normal visitors, APIs, and
+monitoring. The rule is managed in the zone's custom WAF ruleset; import or
+review existing Cloudflare custom rulesets before applying because Terraform
+expects to manage that ruleset entry point.
+
+Bot Fight Mode is available in Cloudflare's dashboard on the Free plan, but is
+domain-wide and cannot be tailored with custom WAF exceptions. Enable it
+manually under Security settings only after testing the site and APIs. It may
+challenge legitimate automated clients. For origin bypass protection, restrict
+direct access to the OVH origin to Cloudflare IP ranges after verifying the
+Cloudflare route works; proxying DNS alone does not prevent direct-origin access.
+
 ## Environment Variables
 
 | Variable | Description | Required |

@@ -5,3 +5,13 @@
 # registry_region = "GRA"
 # registry_name   = "how-to-be-human"
 # harbor_project  = "how-to-be-human"   # create in the Harbor UI after apply
+
+# Optional Cloudflare Free edge protection. Create the zone in Cloudflare,
+# point this proxied DNS record at the OVHcloud Ingress/VM public IPv4, then
+# set enable_cloudflare_edge = true. API token is supplied via CLOUDFLARE_API_TOKEN.
+# enable_cloudflare_edge        = true
+# cloudflare_zone_id            = "your-cloudflare-zone-id"
+# cloudflare_hostname           = "www.example.com"
+# cloudflare_origin_ipv4         = "203.0.113.10"
+# Optional: challenge only this route prefix; leave unset until a content API exists.
+# cloudflare_content_path_prefix = "/api/content"
