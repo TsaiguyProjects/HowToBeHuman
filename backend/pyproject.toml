@@ -22,7 +22,7 @@ dev = [
     "black==26.10.1",
     "pytest==9.1.1",
     "pytest-cov==7.1.0",
-    "mypy==2.4.0",
+    "mypy==2.4.1",
     "testcontainers==4.15.0",
     "requests==2.34.2",
 ]
